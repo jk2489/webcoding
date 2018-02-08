@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="/home/jaykim/node_modules/jquery/dist/jquery.min.js"></script>
+        <title>JQuery Example</title>
+    </head>
+    <body>
+        <script type="text/javascript">
+        $(function() {
+            $("#user_name").focus();
+            $("#user_id").focus(function() {
+                $(this).val("");
+            });
+            $("#user_id").blur(function() {
+                $(this).val("Enter the ID");
+            })
+        });
+        </script>
+
+        <p>
+            <input type="text" name="user_name" id="user_name"/>
+        </p>
+        <p>
+            <input type="text" name="user_id" id="user_id" value="Enter the ID"/>
+        </p>
+    </body>
+</html>

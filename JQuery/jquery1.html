@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="/home/jaykim/node_modules/jquery/dist/jquery.min.js"></script>
+        <title>JQuery Example</title>
+
+        <style type="text/css">
+            #user_id{ime-mode:disabled;}
+        </style>
+    </head>
+    <body>
+        <script>
+            $(function() {
+                $("#user_id").keydown(function(e) {
+                    $(this).css("background-color", "purple");
+                    $("#txt1").text(e.keyCode);
+                });
+                $("#user_id").keypress(function(e) {
+                    $("#txt2").text(e.keyCode);
+                });
+                $("#user_id").keyup(function() {
+                    $(this).css("background-color", "yellow");
+                });
+            });
+        </script>
+
+        <p>
+            <input type="text" name="user_id" id="user_id" />
+        </p>
+        <p id="txt1"></p>
+        <p id="txt2"></p>
+    </body>
+</html>
