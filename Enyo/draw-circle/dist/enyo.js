@@ -97,91 +97,7 @@ module.exports = (global.enyo && global.enyo.options) || {};
 exports = module.exports = require('./src/options');
 exports.version = '2.7.0';
 
-},{'./src/options':'enyo/options'}],'enyo/roots':[function (module,exports,global,require,request){
-require('enyo');
-
-/**
-* @module enyo/roots
-*/
-
-/**
-* @private
-*/
-var callbacks = [],
-	roots = [];
-
-/**
-* Registers a single callback to be executed whenever a root view is rendered.
-* 
-* @name enyo.rendered
-* @method
-* @param {Function} method - The callback to execute.
-* @param {Object} [context=enyo.global] The context under which to execute the callback.
-* @public
-*/
-exports.rendered = function (method, context) {
-	callbacks.push({method: method, context: context || global});
-};
-
-/**
-* @private
-*/
-exports.roots = roots;
-
-/**
-* Invokes all known callbacks (if any) against the root view once it has been rendered.
-* This method is not likely to be executed very often.
-* 
-* @private
-*/
-function invoke (root) {
-	callbacks.forEach(function (ln) {
-		ln.method.call(ln.context, root);
-	});
-}
-
-/**
-* @private
-*/
-exports.addToRoots = function (view) {
-	var rendered,
-		destroy;
-	
-	// since it is possible to call renderInto more than once on a given view we ensure we
-	// don't register it twice unnecessarily
-	if (roots.indexOf(view) === -1) {
-		
-		roots.push(view);
-		
-		// hijack the rendered method
-		rendered = view.rendered;
-		
-		// hijack the destroy method
-		destroy = view.destroy;
-		
-		// supply our rendered hook
-		view.rendered = function () {
-			// we call the original first
-			rendered.apply(this, arguments);
-			
-			// and now we invoke the known callbacks against this root
-			invoke(this);
-		};
-		
-		// supply our destroy hook
-		view.destroy = function () {
-			var idx = roots.indexOf(this);
-			
-			// remove it from the roots array
-			if (idx > -1) roots.splice(idx, 1);
-			
-			// now we can call the original
-			destroy.apply(this, arguments);
-		};
-	}
-};
-
-}],'enyo/ready':[function (module,exports,global,require,request){
+},{'./src/options':'enyo/options'}],'enyo/ready':[function (module,exports,global,require,request){
 require('enyo');
 
 // we need to register appropriately to know when
@@ -1519,6 +1435,90 @@ var rtlPattern = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\u
 exports.isRtl = function (str) {
 	return rtlPattern.test(str);
 };
+}],'enyo/roots':[function (module,exports,global,require,request){
+require('enyo');
+
+/**
+* @module enyo/roots
+*/
+
+/**
+* @private
+*/
+var callbacks = [],
+	roots = [];
+
+/**
+* Registers a single callback to be executed whenever a root view is rendered.
+* 
+* @name enyo.rendered
+* @method
+* @param {Function} method - The callback to execute.
+* @param {Object} [context=enyo.global] The context under which to execute the callback.
+* @public
+*/
+exports.rendered = function (method, context) {
+	callbacks.push({method: method, context: context || global});
+};
+
+/**
+* @private
+*/
+exports.roots = roots;
+
+/**
+* Invokes all known callbacks (if any) against the root view once it has been rendered.
+* This method is not likely to be executed very often.
+* 
+* @private
+*/
+function invoke (root) {
+	callbacks.forEach(function (ln) {
+		ln.method.call(ln.context, root);
+	});
+}
+
+/**
+* @private
+*/
+exports.addToRoots = function (view) {
+	var rendered,
+		destroy;
+	
+	// since it is possible to call renderInto more than once on a given view we ensure we
+	// don't register it twice unnecessarily
+	if (roots.indexOf(view) === -1) {
+		
+		roots.push(view);
+		
+		// hijack the rendered method
+		rendered = view.rendered;
+		
+		// hijack the destroy method
+		destroy = view.destroy;
+		
+		// supply our rendered hook
+		view.rendered = function () {
+			// we call the original first
+			rendered.apply(this, arguments);
+			
+			// and now we invoke the known callbacks against this root
+			invoke(this);
+		};
+		
+		// supply our destroy hook
+		view.destroy = function () {
+			var idx = roots.indexOf(this);
+			
+			// remove it from the roots array
+			if (idx > -1) roots.splice(idx, 1);
+			
+			// now we can call the original
+			destroy.apply(this, arguments);
+		};
+	}
+};
+
 }],'enyo/json':[function (module,exports,global,require,request){
 require('enyo');
 
@@ -3487,7 +3487,217 @@ exports.createFromKind = function (nom, param) {
 	}
 };
 
-},{'./logger':'enyo/logger','./utils':'enyo/utils'}],'enyo/MixinSupport':[function (module,exports,global,require,request){
+},{'./logger':'enyo/logger','./utils':'enyo/utils'}],'enyo/Control/floatingLayer':[function (module,exports,global,require,request){
+/**
+* Exports the {@link module:enyo/Control/floatingLayer~FloatingLayer} singleton instance.
+* @module enyo/Control/floatingLayer
+*/
+
+var
+	kind = require('../kind'),
+	platform = require('../platform');
+
+module.exports = function (Control) {
+	/**
+	* {@link module:enyo/Control/floatingLayer~FloatingLayer} is a
+	* [control]{@link module:enyo/Control~Control} that provides a layer for controls that should be
+	* displayed above an [application]{@link module:enyo/Application~Application}. The `floatingLayer`
+	* singleton can be set as a control's parent to have the control float above the application, e.g.:
+	*
+	* ```
+	* var floatingLayer = require('enyo/floatingLayer');
+	* ...
+	* create: kind.inherit(function (sup) {
+	*	return function() {
+	*		sup.apply(this, arguments);
+	*		this.setParent(floatingLayer);
+	*	}
+	* });
+	* ```
+	*
+	* Note: `FloatingLayer` is not meant to be instantiated by users.
+	*
+	* @class FloatingLayer
+	* @extends module:enyo/Control~Control
+	* @ui
+	* @protected
+	*/
+	var FloatingLayer = kind(
+		/** @lends module:enyo/Control/floatingLayer~FloatingLayer.prototype */ {
+
+		/**
+		* @private
+		*/
+		kind: Control,
+
+		/**
+		* @private
+		*/
+		classes: 'enyo-fit enyo-clip enyo-untouchable',
+
+		/**
+		* @private
+		*/
+		accessibilityPreventScroll: true,
+
+		/**
+		* @method
+		* @private
+		*/
+		create: kind.inherit(function (sup) {
+			return function() {
+				sup.apply(this, arguments);
+				this.setParent(null);
+
+				if (platform.ie < 11) {
+					this.removeClass('enyo-fit');
+				}
+			};
+		}),
+
+		/**
+		* Detects when [node]{@glossary Node} is detatched due to `document.body` being stomped.
+		*
+		* @method
+		* @private
+		*/
+		hasNode: kind.inherit(function (sup) {
+			return function() {
+				sup.apply(this, arguments);
+				if (this.node && !this.node.parentNode) {
+					this.teardownRender();
+				}
+				return this.node;
+			};
+		}),
+
+		/**
+		* @method
+		* @private
+		*/
+		render: kind.inherit(function (sup) {
+			return function() {
+				this.parentNode = document.body;
+				return sup.apply(this, arguments);
+			};
+		}),
+
+		/**
+		* @private
+		*/
+		generateInnerHtml: function () {
+			return '';
+		},
+
+		/**
+		* @private
+		*/
+		beforeChildRender: function () {
+			if (!this.hasNode()) {
+				this.render();
+			}
+		},
+
+		/**
+		* @private
+		*/
+		teardownChildren: function () {
+		}
+	});
+
+	return FloatingLayer;
+};
+},{'../kind':'enyo/kind','../platform':'enyo/platform'}],'enyo/ApplicationSupport':[function (module,exports,global,require,request){
+/**
+* Exports the {@link module:enyo/ApplicationSupport~ApplicationSupport} mixin.
+* @module enyo/ApplicationSupport
+*/
+
+require('enyo');
+
+var kind = require('./kind');
+
+/**
+* An internally-used support {@glossary mixin} that is applied to all
+* [components]{@link module:enyo/Component~Component} of an {@link module:enyo/Application~Application} instance
+* (and to their components, recursively). This mixin adds an `app` property to
+* each component -- a local reference to the `Application` instance that
+* the component belongs to.
+* 
+* @mixin
+* @protected
+*/
+var ApplicationSupport = {
+
+	/**
+	* @private
+	*/
+	name: 'ApplicationSupport',
+
+	/**
+	* @private
+	*/
+	adjustComponentProps: kind.inherit(function (sup) {
+		return function (props) {
+			props.app = props.app || this.app;
+			sup.apply(this, arguments);
+		};
+	}),
+
+	/**
+	* @private
+	*/
+	destroy: kind.inherit(function (sup) {
+		return function () {
+			// release the reference to the application
+			this.app = null;
+			sup.apply(this, arguments);
+		};
+	})
+
+};
+
+module.exports = ApplicationSupport;
+
+},{'./kind':'enyo/kind'}],'enyo/ComponentBindingSupport':[function (module,exports,global,require,request){
+/**
+* Exports the {@link module:enyo/ComponentBindingSupport~ComponentBindingSupport} mixin.
+* @module enyo/ComponentBindingSupport
+*/
+
+require('enyo');
+
+var
+	kind = require('./kind');
+
+/**
+* An internally-used {@glossary mixin} applied to {@link module:enyo/Component~Component}
+* instances to better support [bindings]{@link module:enyo/Binding~Binding}.
+*
+* @mixin
+* @protected
+*/
+var ComponentBindingSupport = {
+	
+	/**
+	* @private
+	*/
+	name: 'ComponentBindingSupport',
+	
+	/**
+	* @private
+	*/
+	adjustComponentProps: kind.inherit(function (sup) {
+		return function (props) {
+			sup.apply(this, arguments);
+			props.bindingTransformOwner || (props.bindingTransformOwner = this.getInstanceOwner());
+		};
+	})
+};
+
+module.exports = ComponentBindingSupport;
+
+},{'./kind':'enyo/kind'}],'enyo/MixinSupport':[function (module,exports,global,require,request){
 /**
 * Exports the {@link module:enyo/MixinSupport~MixinSupport} mixin.
 * @module enyo/MixinSupport
@@ -3608,79 +3818,249 @@ var MixinSupport = {
 
 module.exports = MixinSupport;
 
-},{'./utils':'enyo/utils','./kind':'enyo/kind','./logger':'enyo/logger'}],'enyo/LinkedListNode':[function (module,exports,global,require,request){
-require('enyo');
-
+},{'./utils':'enyo/utils','./kind':'enyo/kind','./logger':'enyo/logger'}],'enyo/ComputedSupport':[function (module,exports,global,require,request){
 /**
-* Contains the declaration for the {@link module:enyo/LinkedListNode~LinkedListNode} kind.
-* @module enyo/LinkedListNode
+* Exports the {@link module:enyo/ComputedSupport~ComputedSupport} mixin.
+* @module enyo/ComputedSupport
 */
+
+require('enyo');
 
 var
 	kind = require('./kind'),
 	utils = require('./utils');
 
+var extend = kind.statics.extend;
+	
+kind.concatenated.push('computed');
+
+function getComputedValue (obj, path) {
+	var cache = obj._getComputedCache(path)
+		, isCached = obj._isComputedCached(path);
+	
+	// in the end, for efficiency and completeness in other situations
+	// it is better to know the returned value of all computed properties
+	// but in cases where they are set as cached we will sometimes use
+	// that value
+	if (cache.dirty || cache.dirty === undefined) {
+		isCached && (cache.dirty = false);
+		cache.previous = cache.value;
+		cache.value = obj[path]();
+	}
+	
+	return cache.value;
+}
+
+function queueComputed (obj, path) {
+	var queue = obj._computedQueue || (obj._computedQueue = [])
+		, deps = obj._computedDependencies[path];
+		
+	if (deps) {
+		for (var i=0, dep; (dep=deps[i]); ++i) {
+			if (!queue.length || -1 == queue.indexOf(dep)) queue.push(dep);
+		}
+	}
+}
+
+function flushComputed (obj) {
+	var queue = obj._computedQueue;
+	obj._computedQueue = null;
+	if (queue && obj.isObserving()) {
+		for (var i=0, ln; (ln=queue[i]); ++i) {
+			obj.notify(ln, obj._getComputedCache(ln).value, getComputedValue(obj, ln));
+		}
+	}
+}
+
 /**
-* An abstract linked-list node.
+* A {@glossary mixin} that adds API methods to support
+* [computed properties]{@glossary computed_property}. Unlike other support mixins,
+* this mixin does not need to be explicitly included by a [kind]{@glossary kind}. If the
+* `computed` [array]{@glossary Array} is found in a kind definition, this mixin will
+* automatically be included.
 *
-* @class LinkedListNode
+* @mixin
+* @public
+*/
+var ComputedSupport = {
+	/**
+	* @private
+	*/
+	name: 'ComputedSuport',
+	
+	/**
+	* @private
+	*/
+	_computedRecursion: 0,
+	
+	/**
+	* Primarily intended for internal use, this method determines whether the
+	* given path is a known [computed property]{@glossary computed_property}.
+	*
+	* @param {String} path - The property or path to test.
+	* @returns {Boolean} Whether or not the `path` is a
+	*	[computed property]{@glossary computed_property}.
+	* @public
+	*/
+	isComputed: function (path) {
+		// if it exists it will be explicitly one of these cases and it is cheaper than hasOwnProperty
+		return this._computed && (this._computed[path] === true || this._computed[path] === false);
+	},
+	
+	/**
+	* Primarily intended for internal use, this method determines whether the
+	* given path is a known dependency of a
+	* [computed property]{@glossary computed_property}.
+	*
+	* @param {String} path - The property or path to test.
+	* @returns {Boolean} Whether or not the `path` is a dependency of a
+	*	[computed property]{@glossary computed_property}.
+	* @public
+	*/
+	isComputedDependency: function (path) {
+		return !! (this._computedDependencies? this._computedDependencies[path]: false);
+	},
+	
+	/**
+	* @private
+	*/
+	get: kind.inherit(function (sup) {
+		return function (path) {
+			return this.isComputed(path)? getComputedValue(this, path): sup.apply(this, arguments);
+		};
+	}),
+	
+	/**
+	* @private
+	*/
+	set: kind.inherit(function (sup) {
+		return function (path) {
+			// we do not accept parameters for computed properties
+			return this.isComputed(path)? this: sup.apply(this, arguments);
+		};
+	}),
+	
+	/**
+	* @private
+	*/
+	notifyObservers: function () {
+		return this.notify.apply(this, arguments);
+	},
+	
+	/**
+	* @private
+	*/
+	notify: kind.inherit(function (sup) {
+		return function (path, was, is) {
+			this.isComputedDependency(path) && queueComputed(this, path);
+			this._computedRecursion++;
+			sup.apply(this, arguments);
+			this._computedRecursion--;
+			this._computedQueue && this._computedRecursion === 0 && flushComputed(this);
+			return this;
+		};
+	}),
+	
+	/**
+	* @private
+	*/
+	_isComputedCached: function (path) {
+		return this._computed[path];
+	},
+	
+	/**
+	* @private
+	*/
+	_getComputedCache: function (path) {
+		var cache = this._computedCache || (this._computedCache = {});
+		return cache[path] || (cache[path] = {});
+	}
+};
+
+module.exports = ComputedSupport;
+
+/*
+* Hijack the original so we can add additional default behavior.
+*/
+var sup = kind.concatHandler;
+
+// @NOTE: It seems like a lot of work but it really won't happen that much and the more
+// we push to kind-time the better for initialization time
+
+/**
 * @private
 */
-module.exports = kind(
-	/** @lends module:enyo/LinkedListNode~LinkedListNode.prototype */ {
-	
-	/**
-	* @private
-	*/
-	kind: null,
-	
-	/**
-	* @private
-	*/
+kind.concatHandler = function (ctor, props, instance) {
 
-	
-	/**
-	* @private
-	*/
-	prev: null,
-	
-	/**
-	* @private
-	*/
-	next: null,
-	
-	/**
-	* @private
-	*/
-	copy: function () {
-		var cpy = new this.ctor();
-		cpy.prev = this.prev;
-		cpy.next = this.next;
-		return cpy;
-	},
-	
-	/**
-	* @private
-	*/
-	constructor: function (props) {
-		props && utils.mixin(this, props);
-	},
-	
-	/**
-	* @private
-	*/
-	destroy: function () {
-		// clear reference to previous node
-		this.prev = null;
+	sup.call(this, ctor, props, instance);
+
+	// only matters if there are computed properties to manage
+	if (props.computed) {
 		
-		// if we have a reference to our next node
-		// we continue down the chain
-		this.next && this.next.destroy();
+		var proto = ctor.prototype || ctor
+			, computed = proto._computed? Object.create(proto._computed): {}
+			, dependencies = proto._computedDependencies? Object.create(proto._computedDependencies): {};
 		
-		// clear our reference to the next node
-		this.next = null;
+		// if it hasn't already been applied we need to ensure that the prototype will
+		// actually have the computed support mixin present, it will not apply it more
+		// than once to the prototype
+		extend(ComputedSupport, proto);
+	
+		// @NOTE: This is the handling of the original syntax provided for computed properties in 2.3.ish...
+		// All we do here is convert it to a structure that can be used for the other scenario and preferred
+		// computed declarations format
+		if (!props.computed || !(props.computed instanceof Array)) {
+			(function () {
+				var tmp = [], deps, name, conf;
+				// here is the slow iteration over the properties...
+				for (name in props.computed) {
+					// points to the dependencies of the computed method
+					deps = props.computed[name];
+					/*jshint -W083 */
+					conf = deps && deps.find(function (ln) {
+						// we deliberately remove the entry here and forcibly return true to break
+						return typeof ln == 'object'? (utils.remove(deps, ln) || true): false;
+					});
+					/*jshint +W083 */
+					// create a single entry now for the method/computed with all dependencies
+					tmp.push({method: name, path: deps, cached: conf? conf.cached: null});
+				}
+				
+				// note that we only do this one so even for a mixin that is evaluated several
+				// times this would only happen once
+				props.computed = tmp;
+			}());
+		}
+		
+		var addDependency = function (path, dep) {
+			// its really an inverse look at the original
+			var deps;
+			
+			if (dependencies[path] && !dependencies.hasOwnProperty(path)) dependencies[path] = dependencies[path].slice();
+			deps = dependencies[path] || (dependencies[path] = []);
+			deps.push(dep);
+		};
+		
+		// now we handle the new computed properties the way we intended to
+		for (var i=0, ln; (ln=props.computed[i]); ++i) {
+			// if the entry already exists we are merely updating whether or not it is
+			// now cached
+			computed[ln.method] = !! ln.cached;
+			// we must now look to add an entry for any given dependencies and map them
+			// back to the computed property they will trigger
+			/*jshint -W083 */
+			if (ln.path && ln.path instanceof Array) ln.path.forEach(function (dep) { addDependency(dep, ln.method); });
+			/*jshint +W083 */
+			else if (ln.path) addDependency(ln.path, ln.method);
+		}
+		
+		// arg, free the key from the properties so it won't be applied later...
+		// delete props.computed;
+		// make sure to reassign the correct items to the prototype
+		proto._computed = computed;
+		proto._computedDependencies = dependencies;
 	}
-});
+};
 
 },{'./kind':'enyo/kind','./utils':'enyo/utils'}],'enyo/Binding':[function (module,exports,global,require,request){
 require('enyo');
@@ -4376,10 +4756,84 @@ exports.defaultBindingKind = exports;
 */
 exports.PassiveBinding = PassiveBinding;
 
-},{'./kind':'enyo/kind','./utils':'enyo/utils'}],'enyo/ComputedSupport':[function (module,exports,global,require,request){
+},{'./kind':'enyo/kind','./utils':'enyo/utils'}],'enyo/LinkedListNode':[function (module,exports,global,require,request){
+require('enyo');
+
 /**
-* Exports the {@link module:enyo/ComputedSupport~ComputedSupport} mixin.
-* @module enyo/ComputedSupport
+* Contains the declaration for the {@link module:enyo/LinkedListNode~LinkedListNode} kind.
+* @module enyo/LinkedListNode
+*/
+
+var
+	kind = require('./kind'),
+	utils = require('./utils');
+
+/**
+* An abstract linked-list node.
+*
+* @class LinkedListNode
+* @private
+*/
+module.exports = kind(
+	/** @lends module:enyo/LinkedListNode~LinkedListNode.prototype */ {
+	
+	/**
+	* @private
+	*/
+	kind: null,
+	
+	/**
+	* @private
+	*/
+
+	
+	/**
+	* @private
+	*/
+	prev: null,
+	
+	/**
+	* @private
+	*/
+	next: null,
+	
+	/**
+	* @private
+	*/
+	copy: function () {
+		var cpy = new this.ctor();
+		cpy.prev = this.prev;
+		cpy.next = this.next;
+		return cpy;
+	},
+	
+	/**
+	* @private
+	*/
+	constructor: function (props) {
+		props && utils.mixin(this, props);
+	},
+	
+	/**
+	* @private
+	*/
+	destroy: function () {
+		// clear reference to previous node
+		this.prev = null;
+		
+		// if we have a reference to our next node
+		// we continue down the chain
+		this.next && this.next.destroy();
+		
+		// clear our reference to the next node
+		this.next = null;
+	}
+});
+
+},{'./kind':'enyo/kind','./utils':'enyo/utils'}],'enyo/BindingSupport':[function (module,exports,global,require,request){
+/**
+* Exports the {@link module:enyo/BindingSupport~BindingSupport} mixin
+* @module enyo/BindingSupport
 */
 
 require('enyo');
@@ -4388,449 +4842,179 @@ var
 	kind = require('./kind'),
 	utils = require('./utils');
 
-var extend = kind.statics.extend;
-	
-kind.concatenated.push('computed');
+var
+	Binding = require('./Binding');
 
-function getComputedValue (obj, path) {
-	var cache = obj._getComputedCache(path)
-		, isCached = obj._isComputedCached(path);
-	
-	// in the end, for efficiency and completeness in other situations
-	// it is better to know the returned value of all computed properties
-	// but in cases where they are set as cached we will sometimes use
-	// that value
-	if (cache.dirty || cache.dirty === undefined) {
-		isCached && (cache.dirty = false);
-		cache.previous = cache.value;
-		cache.value = obj[path]();
-	}
-	
-	return cache.value;
-}
-
-function queueComputed (obj, path) {
-	var queue = obj._computedQueue || (obj._computedQueue = [])
-		, deps = obj._computedDependencies[path];
-		
-	if (deps) {
-		for (var i=0, dep; (dep=deps[i]); ++i) {
-			if (!queue.length || -1 == queue.indexOf(dep)) queue.push(dep);
-		}
-	}
-}
-
-function flushComputed (obj) {
-	var queue = obj._computedQueue;
-	obj._computedQueue = null;
-	if (queue && obj.isObserving()) {
-		for (var i=0, ln; (ln=queue[i]); ++i) {
-			obj.notify(ln, obj._getComputedCache(ln).value, getComputedValue(obj, ln));
-		}
-	}
-}
+kind.concatenated.push('bindings');
 
 /**
-* A {@glossary mixin} that adds API methods to support
-* [computed properties]{@glossary computed_property}. Unlike other support mixins,
-* this mixin does not need to be explicitly included by a [kind]{@glossary kind}. If the
-* `computed` [array]{@glossary Array} is found in a kind definition, this mixin will
-* automatically be included.
+* An internally-used {@glossary mixin} that is added to {@link module:enyo/CoreObject~Object}
+* and its [subkinds]{@glossary subkind}. It includes public and protected API
+* methods for working with [bindings]{@link module:enyo/Binding~Binding}.
 *
-* @mixin
-* @public
-*/
-var ComputedSupport = {
-	/**
-	* @private
-	*/
-	name: 'ComputedSuport',
-	
-	/**
-	* @private
-	*/
-	_computedRecursion: 0,
-	
-	/**
-	* Primarily intended for internal use, this method determines whether the
-	* given path is a known [computed property]{@glossary computed_property}.
-	*
-	* @param {String} path - The property or path to test.
-	* @returns {Boolean} Whether or not the `path` is a
-	*	[computed property]{@glossary computed_property}.
-	* @public
-	*/
-	isComputed: function (path) {
-		// if it exists it will be explicitly one of these cases and it is cheaper than hasOwnProperty
-		return this._computed && (this._computed[path] === true || this._computed[path] === false);
-	},
-	
-	/**
-	* Primarily intended for internal use, this method determines whether the
-	* given path is a known dependency of a
-	* [computed property]{@glossary computed_property}.
-	*
-	* @param {String} path - The property or path to test.
-	* @returns {Boolean} Whether or not the `path` is a dependency of a
-	*	[computed property]{@glossary computed_property}.
-	* @public
-	*/
-	isComputedDependency: function (path) {
-		return !! (this._computedDependencies? this._computedDependencies[path]: false);
-	},
-	
-	/**
-	* @private
-	*/
-	get: kind.inherit(function (sup) {
-		return function (path) {
-			return this.isComputed(path)? getComputedValue(this, path): sup.apply(this, arguments);
-		};
-	}),
-	
-	/**
-	* @private
-	*/
-	set: kind.inherit(function (sup) {
-		return function (path) {
-			// we do not accept parameters for computed properties
-			return this.isComputed(path)? this: sup.apply(this, arguments);
-		};
-	}),
-	
-	/**
-	* @private
-	*/
-	notifyObservers: function () {
-		return this.notify.apply(this, arguments);
-	},
-	
-	/**
-	* @private
-	*/
-	notify: kind.inherit(function (sup) {
-		return function (path, was, is) {
-			this.isComputedDependency(path) && queueComputed(this, path);
-			this._computedRecursion++;
-			sup.apply(this, arguments);
-			this._computedRecursion--;
-			this._computedQueue && this._computedRecursion === 0 && flushComputed(this);
-			return this;
-		};
-	}),
-	
-	/**
-	* @private
-	*/
-	_isComputedCached: function (path) {
-		return this._computed[path];
-	},
-	
-	/**
-	* @private
-	*/
-	_getComputedCache: function (path) {
-		var cache = this._computedCache || (this._computedCache = {});
-		return cache[path] || (cache[path] = {});
-	}
-};
-
-module.exports = ComputedSupport;
-
-/*
-* Hijack the original so we can add additional default behavior.
-*/
-var sup = kind.concatHandler;
-
-// @NOTE: It seems like a lot of work but it really won't happen that much and the more
-// we push to kind-time the better for initialization time
-
-/**
-* @private
-*/
-kind.concatHandler = function (ctor, props, instance) {
-
-	sup.call(this, ctor, props, instance);
-
-	// only matters if there are computed properties to manage
-	if (props.computed) {
-		
-		var proto = ctor.prototype || ctor
-			, computed = proto._computed? Object.create(proto._computed): {}
-			, dependencies = proto._computedDependencies? Object.create(proto._computedDependencies): {};
-		
-		// if it hasn't already been applied we need to ensure that the prototype will
-		// actually have the computed support mixin present, it will not apply it more
-		// than once to the prototype
-		extend(ComputedSupport, proto);
-	
-		// @NOTE: This is the handling of the original syntax provided for computed properties in 2.3.ish...
-		// All we do here is convert it to a structure that can be used for the other scenario and preferred
-		// computed declarations format
-		if (!props.computed || !(props.computed instanceof Array)) {
-			(function () {
-				var tmp = [], deps, name, conf;
-				// here is the slow iteration over the properties...
-				for (name in props.computed) {
-					// points to the dependencies of the computed method
-					deps = props.computed[name];
-					/*jshint -W083 */
-					conf = deps && deps.find(function (ln) {
-						// we deliberately remove the entry here and forcibly return true to break
-						return typeof ln == 'object'? (utils.remove(deps, ln) || true): false;
-					});
-					/*jshint +W083 */
-					// create a single entry now for the method/computed with all dependencies
-					tmp.push({method: name, path: deps, cached: conf? conf.cached: null});
-				}
-				
-				// note that we only do this one so even for a mixin that is evaluated several
-				// times this would only happen once
-				props.computed = tmp;
-			}());
-		}
-		
-		var addDependency = function (path, dep) {
-			// its really an inverse look at the original
-			var deps;
-			
-			if (dependencies[path] && !dependencies.hasOwnProperty(path)) dependencies[path] = dependencies[path].slice();
-			deps = dependencies[path] || (dependencies[path] = []);
-			deps.push(dep);
-		};
-		
-		// now we handle the new computed properties the way we intended to
-		for (var i=0, ln; (ln=props.computed[i]); ++i) {
-			// if the entry already exists we are merely updating whether or not it is
-			// now cached
-			computed[ln.method] = !! ln.cached;
-			// we must now look to add an entry for any given dependencies and map them
-			// back to the computed property they will trigger
-			/*jshint -W083 */
-			if (ln.path && ln.path instanceof Array) ln.path.forEach(function (dep) { addDependency(dep, ln.method); });
-			/*jshint +W083 */
-			else if (ln.path) addDependency(ln.path, ln.method);
-		}
-		
-		// arg, free the key from the properties so it won't be applied later...
-		// delete props.computed;
-		// make sure to reassign the correct items to the prototype
-		proto._computed = computed;
-		proto._computedDependencies = dependencies;
-	}
-};
-
-},{'./kind':'enyo/kind','./utils':'enyo/utils'}],'enyo/ApplicationSupport':[function (module,exports,global,require,request){
-/**
-* Exports the {@link module:enyo/ApplicationSupport~ApplicationSupport} mixin.
-* @module enyo/ApplicationSupport
-*/
-
-require('enyo');
-
-var kind = require('./kind');
-
-/**
-* An internally-used support {@glossary mixin} that is applied to all
-* [components]{@link module:enyo/Component~Component} of an {@link module:enyo/Application~Application} instance
-* (and to their components, recursively). This mixin adds an `app` property to
-* each component -- a local reference to the `Application` instance that
-* the component belongs to.
-* 
 * @mixin
 * @protected
 */
-var ApplicationSupport = {
-
+var BindingSupport = {
+	
 	/**
 	* @private
 	*/
-	name: 'ApplicationSupport',
-
+	name: 'BindingSupport',
+	
 	/**
 	* @private
 	*/
-	adjustComponentProps: kind.inherit(function (sup) {
-		return function (props) {
-			props.app = props.app || this.app;
+	_bindingSupportInitialized: false,
+	
+	/**
+	* Imperatively creates a [binding]{@link module:enyo/Binding~Binding}. Merges a variable
+	* number of [hashes]{@glossary Object} and instantiates a binding that
+	* will have its [owner]{@link module:enyo/Binding~Binding#owner} property set to the callee
+	* (the current {@link module:enyo/CoreObject~Object}). Bindings created in this way will be
+	* [destroyed]{@link module:enyo/Binding~Binding#destroy} when their `owner` is
+	* [destroyed]{@link module:enyo/CoreObject~Object#destroy}.
+	*
+	* @param {...Object} props A variable number of [hashes]{@glossary Object} that will
+	*	be merged into the properties applied to the {@link module:enyo/Binding~Binding} instance.
+	* @returns {this} The callee for chaining.
+	* @public
+	*/
+	binding: function () {
+		var args = utils.toArray(arguments)
+			, props = utils.mixin(args)
+			, bindings = this.bindings || (this.bindings = [])
+			, passiveBindings = this.passiveBindings || (this.passiveBindings = [])
+			, PBCtor = Binding.PassiveBinding
+			, Ctor, bnd;
+			
+		props.owner = props.owner || this;
+		Ctor = props.kind = props.kind || this.defaultBindingKind || Binding.defaultBindingKind;
+		
+		if (this._bindingSupportInitialized) {
+			utils.isString(Ctor) && (Ctor = props.kind = kind.constructorForKind(Ctor));
+			bnd = new Ctor(props);
+			bindings.push(bnd);
+			if (Ctor === PBCtor) {
+				passiveBindings.push(bnd);
+			}
+			return bnd;
+		} else bindings.push(props);
+		
+		return this;
+	},
+	
+	/**
+	* Removes and [destroys]{@link module:enyo/Binding~Binding#destroy} all of, or a subset of,
+	* the [bindings]{@link module:enyo/Binding~Binding} belonging to the callee.
+	*
+	* @param {module:enyo/Binding~Binding[]} [subset] - The optional [array]{@glossary Array} of
+	*	[bindings]{@link module:enyo/Binding~Binding} to remove.
+	* @returns {this} The callee for chaining.
+	* @public
+	*/
+	clearBindings: function (subset) {
+		var bindings = subset || (this.bindings && this.bindings.slice());
+		bindings.forEach(function (bnd) {
+			bnd.destroy();
+		});
+		
+		return this;
+	},
+
+	syncBindings: function (opts) {
+		var all = opts && opts.all,
+			force = opts && opts.force,
+			bindings = all ? this.bindings : this.passiveBindings;
+
+		bindings.forEach(function (b) {
+			b.sync(force);
+		});
+	},
+	
+	/**
+	* Removes a single {@link module:enyo/Binding~Binding} from the callee. (This does not
+	* [destroy]{@link module:enyo/Binding~Binding#destroy} the binding.) Also removes the
+	* [owner]{@link module:enyo/Binding~Binding#owner} reference if it is the callee.
+	*
+	* It should be noted that when a binding is destroyed, it is automatically
+	* removed from its owner.
+	*
+	* @param {module:enyo/Binding~Binding} binding - The {@link module:enyo/Binding~Binding} instance to remove.
+	* @returns {this} The callee for chaining.
+	* @public
+	*/
+	removeBinding: function (binding) {
+		utils.remove(binding, this.bindings);
+		if (binding.ctor === Binding.PassiveBinding) {
+			utils.remove(binding, this.passiveBindings);
+		}
+		
+		if (binding.owner === this) binding.owner = null;
+		
+		return this;
+	},
+	
+	/**
+	* @private
+	*/
+	constructed: kind.inherit(function (sup) {
+		return function () {
+			var bindings = this.bindings;
+			this._bindingSupportInitialized = true;
+			if (bindings) {
+				this.bindings = [];
+				this.passiveBindings = [];
+				bindings.forEach(function (def) {
+					this.binding(def);
+				}, this);
+			}
 			sup.apply(this, arguments);
 		};
 	}),
-
+	
 	/**
 	* @private
 	*/
 	destroy: kind.inherit(function (sup) {
 		return function () {
-			// release the reference to the application
-			this.app = null;
 			sup.apply(this, arguments);
-		};
-	})
-
-};
-
-module.exports = ApplicationSupport;
-
-},{'./kind':'enyo/kind'}],'enyo/ComponentBindingSupport':[function (module,exports,global,require,request){
-/**
-* Exports the {@link module:enyo/ComponentBindingSupport~ComponentBindingSupport} mixin.
-* @module enyo/ComponentBindingSupport
-*/
-
-require('enyo');
-
-var
-	kind = require('./kind');
-
-/**
-* An internally-used {@glossary mixin} applied to {@link module:enyo/Component~Component}
-* instances to better support [bindings]{@link module:enyo/Binding~Binding}.
-*
-* @mixin
-* @protected
-*/
-var ComponentBindingSupport = {
-	
-	/**
-	* @private
-	*/
-	name: 'ComponentBindingSupport',
-	
-	/**
-	* @private
-	*/
-	adjustComponentProps: kind.inherit(function (sup) {
-		return function (props) {
-			sup.apply(this, arguments);
-			props.bindingTransformOwner || (props.bindingTransformOwner = this.getInstanceOwner());
+			this.bindings && this.bindings.length && this.clearBindings();
+			this.bindings = null;
+			this.passiveBindings = null;
 		};
 	})
 };
 
-module.exports = ComponentBindingSupport;
+module.exports = BindingSupport;
 
-},{'./kind':'enyo/kind'}],'enyo/Control/floatingLayer':[function (module,exports,global,require,request){
 /**
-* Exports the {@link module:enyo/Control/floatingLayer~FloatingLayer} singleton instance.
-* @module enyo/Control/floatingLayer
+	Hijack the original so we can add additional default behavior.
 */
+var sup = kind.concatHandler
+	, flags = {ignore: true};
 
-var
-	kind = require('../kind'),
-	platform = require('../platform');
-
-module.exports = function (Control) {
-	/**
-	* {@link module:enyo/Control/floatingLayer~FloatingLayer} is a
-	* [control]{@link module:enyo/Control~Control} that provides a layer for controls that should be
-	* displayed above an [application]{@link module:enyo/Application~Application}. The `floatingLayer`
-	* singleton can be set as a control's parent to have the control float above the application, e.g.:
-	*
-	* ```
-	* var floatingLayer = require('enyo/floatingLayer');
-	* ...
-	* create: kind.inherit(function (sup) {
-	*	return function() {
-	*		sup.apply(this, arguments);
-	*		this.setParent(floatingLayer);
-	*	}
-	* });
-	* ```
-	*
-	* Note: `FloatingLayer` is not meant to be instantiated by users.
-	*
-	* @class FloatingLayer
-	* @extends module:enyo/Control~Control
-	* @ui
-	* @protected
-	*/
-	var FloatingLayer = kind(
-		/** @lends module:enyo/Control/floatingLayer~FloatingLayer.prototype */ {
-
-		/**
-		* @private
-		*/
-		kind: Control,
-
-		/**
-		* @private
-		*/
-		classes: 'enyo-fit enyo-clip enyo-untouchable',
-
-		/**
-		* @private
-		*/
-		accessibilityPreventScroll: true,
-
-		/**
-		* @method
-		* @private
-		*/
-		create: kind.inherit(function (sup) {
-			return function() {
-				sup.apply(this, arguments);
-				this.setParent(null);
-
-				if (platform.ie < 11) {
-					this.removeClass('enyo-fit');
-				}
-			};
-		}),
-
-		/**
-		* Detects when [node]{@glossary Node} is detatched due to `document.body` being stomped.
-		*
-		* @method
-		* @private
-		*/
-		hasNode: kind.inherit(function (sup) {
-			return function() {
-				sup.apply(this, arguments);
-				if (this.node && !this.node.parentNode) {
-					this.teardownRender();
-				}
-				return this.node;
-			};
-		}),
-
-		/**
-		* @method
-		* @private
-		*/
-		render: kind.inherit(function (sup) {
-			return function() {
-				this.parentNode = document.body;
-				return sup.apply(this, arguments);
-			};
-		}),
-
-		/**
-		* @private
-		*/
-		generateInnerHtml: function () {
-			return '';
-		},
-
-		/**
-		* @private
-		*/
-		beforeChildRender: function () {
-			if (!this.hasNode()) {
-				this.render();
-			}
-		},
-
-		/**
-		* @private
-		*/
-		teardownChildren: function () {
-		}
-	});
-
-	return FloatingLayer;
+/**
+* @private
+*/
+kind.concatHandler = function (ctor, props, instance) {
+	var proto = ctor.prototype || ctor
+		, kind = props && (props.defaultBindingKind || Binding.defaultBindingKind)
+		, defaults = props && props.bindingDefaults;
+	
+	sup.call(this, ctor, props, instance);
+	if (props.bindings) {
+		props.bindings.forEach(function (bnd) {
+			defaults && utils.mixin(bnd, defaults, flags);
+			bnd.kind || (bnd.kind = kind); 
+		});
+		
+		proto.bindings = proto.bindings? proto.bindings.concat(props.bindings): props.bindings;
+		delete props.bindings;
+	}
 };
-},{'../kind':'enyo/kind','../platform':'enyo/platform'}],'enyo/LinkedList':[function (module,exports,global,require,request){
+
+},{'./kind':'enyo/kind','./utils':'enyo/utils','./Binding':'enyo/Binding'}],'enyo/LinkedList':[function (module,exports,global,require,request){
 require('enyo');
 
 /**
@@ -5160,191 +5344,7 @@ module.exports = kind(
 	}
 });
 
-},{'./kind':'enyo/kind','./LinkedListNode':'enyo/LinkedListNode'}],'enyo/BindingSupport':[function (module,exports,global,require,request){
-/**
-* Exports the {@link module:enyo/BindingSupport~BindingSupport} mixin
-* @module enyo/BindingSupport
-*/
-
-require('enyo');
-
-var
-	kind = require('./kind'),
-	utils = require('./utils');
-
-var
-	Binding = require('./Binding');
-
-kind.concatenated.push('bindings');
-
-/**
-* An internally-used {@glossary mixin} that is added to {@link module:enyo/CoreObject~Object}
-* and its [subkinds]{@glossary subkind}. It includes public and protected API
-* methods for working with [bindings]{@link module:enyo/Binding~Binding}.
-*
-* @mixin
-* @protected
-*/
-var BindingSupport = {
-	
-	/**
-	* @private
-	*/
-	name: 'BindingSupport',
-	
-	/**
-	* @private
-	*/
-	_bindingSupportInitialized: false,
-	
-	/**
-	* Imperatively creates a [binding]{@link module:enyo/Binding~Binding}. Merges a variable
-	* number of [hashes]{@glossary Object} and instantiates a binding that
-	* will have its [owner]{@link module:enyo/Binding~Binding#owner} property set to the callee
-	* (the current {@link module:enyo/CoreObject~Object}). Bindings created in this way will be
-	* [destroyed]{@link module:enyo/Binding~Binding#destroy} when their `owner` is
-	* [destroyed]{@link module:enyo/CoreObject~Object#destroy}.
-	*
-	* @param {...Object} props A variable number of [hashes]{@glossary Object} that will
-	*	be merged into the properties applied to the {@link module:enyo/Binding~Binding} instance.
-	* @returns {this} The callee for chaining.
-	* @public
-	*/
-	binding: function () {
-		var args = utils.toArray(arguments)
-			, props = utils.mixin(args)
-			, bindings = this.bindings || (this.bindings = [])
-			, passiveBindings = this.passiveBindings || (this.passiveBindings = [])
-			, PBCtor = Binding.PassiveBinding
-			, Ctor, bnd;
-			
-		props.owner = props.owner || this;
-		Ctor = props.kind = props.kind || this.defaultBindingKind || Binding.defaultBindingKind;
-		
-		if (this._bindingSupportInitialized) {
-			utils.isString(Ctor) && (Ctor = props.kind = kind.constructorForKind(Ctor));
-			bnd = new Ctor(props);
-			bindings.push(bnd);
-			if (Ctor === PBCtor) {
-				passiveBindings.push(bnd);
-			}
-			return bnd;
-		} else bindings.push(props);
-		
-		return this;
-	},
-	
-	/**
-	* Removes and [destroys]{@link module:enyo/Binding~Binding#destroy} all of, or a subset of,
-	* the [bindings]{@link module:enyo/Binding~Binding} belonging to the callee.
-	*
-	* @param {module:enyo/Binding~Binding[]} [subset] - The optional [array]{@glossary Array} of
-	*	[bindings]{@link module:enyo/Binding~Binding} to remove.
-	* @returns {this} The callee for chaining.
-	* @public
-	*/
-	clearBindings: function (subset) {
-		var bindings = subset || (this.bindings && this.bindings.slice());
-		bindings.forEach(function (bnd) {
-			bnd.destroy();
-		});
-		
-		return this;
-	},
-
-	syncBindings: function (opts) {
-		var all = opts && opts.all,
-			force = opts && opts.force,
-			bindings = all ? this.bindings : this.passiveBindings;
-
-		bindings.forEach(function (b) {
-			b.sync(force);
-		});
-	},
-	
-	/**
-	* Removes a single {@link module:enyo/Binding~Binding} from the callee. (This does not
-	* [destroy]{@link module:enyo/Binding~Binding#destroy} the binding.) Also removes the
-	* [owner]{@link module:enyo/Binding~Binding#owner} reference if it is the callee.
-	*
-	* It should be noted that when a binding is destroyed, it is automatically
-	* removed from its owner.
-	*
-	* @param {module:enyo/Binding~Binding} binding - The {@link module:enyo/Binding~Binding} instance to remove.
-	* @returns {this} The callee for chaining.
-	* @public
-	*/
-	removeBinding: function (binding) {
-		utils.remove(binding, this.bindings);
-		if (binding.ctor === Binding.PassiveBinding) {
-			utils.remove(binding, this.passiveBindings);
-		}
-		
-		if (binding.owner === this) binding.owner = null;
-		
-		return this;
-	},
-	
-	/**
-	* @private
-	*/
-	constructed: kind.inherit(function (sup) {
-		return function () {
-			var bindings = this.bindings;
-			this._bindingSupportInitialized = true;
-			if (bindings) {
-				this.bindings = [];
-				this.passiveBindings = [];
-				bindings.forEach(function (def) {
-					this.binding(def);
-				}, this);
-			}
-			sup.apply(this, arguments);
-		};
-	}),
-	
-	/**
-	* @private
-	*/
-	destroy: kind.inherit(function (sup) {
-		return function () {
-			sup.apply(this, arguments);
-			this.bindings && this.bindings.length && this.clearBindings();
-			this.bindings = null;
-			this.passiveBindings = null;
-		};
-	})
-};
-
-module.exports = BindingSupport;
-
-/**
-	Hijack the original so we can add additional default behavior.
-*/
-var sup = kind.concatHandler
-	, flags = {ignore: true};
-
-/**
-* @private
-*/
-kind.concatHandler = function (ctor, props, instance) {
-	var proto = ctor.prototype || ctor
-		, kind = props && (props.defaultBindingKind || Binding.defaultBindingKind)
-		, defaults = props && props.bindingDefaults;
-	
-	sup.call(this, ctor, props, instance);
-	if (props.bindings) {
-		props.bindings.forEach(function (bnd) {
-			defaults && utils.mixin(bnd, defaults, flags);
-			bnd.kind || (bnd.kind = kind); 
-		});
-		
-		proto.bindings = proto.bindings? proto.bindings.concat(props.bindings): props.bindings;
-		delete props.bindings;
-	}
-};
-
-},{'./kind':'enyo/kind','./utils':'enyo/utils','./Binding':'enyo/Binding'}],'enyo/ObserverChain':[function (module,exports,global,require,request){
+},{'./kind':'enyo/kind','./LinkedListNode':'enyo/LinkedListNode'}],'enyo/ObserverChain':[function (module,exports,global,require,request){
 require('enyo');
 
 /**
