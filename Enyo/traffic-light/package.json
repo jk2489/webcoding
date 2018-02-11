@@ -1,0 +1,8 @@
+{
+  "name": "traffic-light",
+  "main": "index.js",
+  "assets": [],
+  "styles": [],
+  "devAssets": [],
+  "moduleDir": "src"
+}
