@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="/home/jaykim/node_modules/jquery/dist/jquery.min.js"></script>
+        <title>JQuery Example</title>
+        <style>
+            bodyfont{ font-family:Arial, Helvetica, sans-serif; font-size: 12px; margin-top:20px; }
+            #f_wrap { font-weight: bold; margin-top: 10px; }
+            #txt_wrap { width: 90%; margin-top:20px; }
+        </style>
+    </head>
+    <body>
+        <div id="f_wrap">
+            <dl>
+                <dt>Font Size</dt>
+                <dd class="zoom">
+                    <button>+</button>
+                    <button>0</button>
+                    <button>-</button>
+                </dd>
+                <dt>Font Type</dt>
+                <dd class="f_style">
+                    <select name="fs" id="fs">
+                        <option value=""></option>
+                    </select>
+                </dd>
+            </dl>
+        </div>
+        <p id="txt_wrap">
+            Keyboard is the tool to....
+        </p>
+
+        <script>
+            $(function() {
+                var size = 12;
+                var body = $("body");
+
+                $(".zoom button").on("clic", function() {
+                    var btn_index = $(".zoom button").index(this);
+
+                    if(btn_index == 0) {
+                        size++;
+                        body.css("font-size", size+"px");
+                    }
+                    else if(btn_index == 2) {
+                        size--;
+                        body.css("font-size", size+"px");
+                    }
+                    else {
+                        body.css("font-size", "12px");
+                        size = 12;
+                    }
+                });
+                
+                $("#fs").on("change", function() {
+                    body.css("font-family", $(this).val());
+                });
+            });
+        </script>
+    </body>
+</html>

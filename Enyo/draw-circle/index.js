@@ -6,7 +6,7 @@ var Control = require('enyo/Control');
 
 var Light = Control.kind({
 	published: {
-		"color": "green"
+		"color": "yellow"
 	},
 	style: "width: 50px; height: 50px; border-radius: 50%",
 	create: function() {
