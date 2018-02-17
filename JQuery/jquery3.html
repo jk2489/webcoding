@@ -1,0 +1,33 @@
+<html>
+    <head>
+        <script src="/home/jaykim/node_modules/jquery/dist/jquery.min.js"></script>
+        <title>JQuery Example</title>
+    </head>
+
+    <body>
+        <button id="btn1">Hide</button>
+        <button id="btn2">Show</button>
+        <button id="btn3">Toggle</button>
+        <h1>content</h1>
+    </body>
+
+    <script type="text/javascript">
+    $(function() {
+        $("#btn1").on("click", function() {
+            $("h1").hide(1000, function() {
+                alert("hiding successful");
+            });
+        });
+
+        $("#btn2").on("click", function() {
+            $("h1").show("slow", function() {
+                alert("showing successful!!!");
+            });
+        });
+
+        $("#btn3").on("click", function() {
+            $("h1").toggle("slow");
+        });
+    })
+    </script>
+</html>

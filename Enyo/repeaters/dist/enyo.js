@@ -1698,7 +1698,195 @@ for (var i = 0, p, m, v; (p = platforms[i]); i++) {
 	}
 }
 
-},{'./utils':'enyo/utils'}],'enyo/dom':[function (module,exports,global,require,request){
+},{'./utils':'enyo/utils'}],'enyo/logger':[function (module,exports,global,require,request){
+require('enyo');
+
+var
+	json = require('./json'),
+	utils = require('./utils'),
+	platform = require('./platform');
+
+/**
+* These platforms only allow one argument for [console.log()]{@glossary console.log}:
+*
+* * android
+* * ios
+* * webos
+*
+* @ignore
+*/
+var dumbConsole = Boolean(platform.android || platform.ios || platform.webos);
+
+/**
+* Internally used methods and properties associated with logging.
+*
+* @module enyo/logger
+* @public
+*/
+exports = module.exports = {
+
+	/**
+	* The log level to use. Can be a value from -1 to 99, where -1 disables all
+	* logging, 0 is 'error', 10 is 'warn', and 20 is 'log'. It is preferred that
+	* this value be set using the [setLogLevel()]{@link module:enyo/logger#setLogLevel}
+	* method.
+	*
+	* @type {Number}
+	* @default 99
+	* @public
+	*/
+	level: 99,
+
+	/**
+	* The known levels.
+	*
+	* @private
+	*/
+	levels: {log: 20, warn: 10, error: 0},
+
+	/**
+	* @private
+	*/
+	shouldLog: function (fn) {
+		var ll = parseInt(this.levels[fn], 0);
+		return (ll <= this.level);
+	},
+
+	/**
+	* @private
+	*/
+	validateArgs: function (args) {
+		// gracefully handle and prevent circular reference errors in objects
+		for (var i=0, l=args.length, item; (item=args[i]) || i<l; i++) {
+			try {
+				if (typeof item === 'object') {
+					args[i] = json.stringify(item);
+				}
+			} catch (e) {
+				args[i] = 'Error: ' + e.message;
+			}
+		}
+	},
+
+	/**
+	* @private
+	*/
+	_log: function (fn, args) {
+		// avoid trying to use console on IE instances where the object hasn't been
+		// created due to the developer tools being unopened
+		var console = global.console;
+		if (typeof console === 'undefined') {
+            return;
+        }
+		//var a$ = utils.logging.formatArgs(fn, args);
+		var a$ = utils.isArray(args) ? args : utils.cloneArray(args);
+		if (platform.androidFirefox) {
+			// Firefox for Android's console does not handle objects with circular references
+			this.validateArgs(a$);
+		}
+		if (dumbConsole) {
+			// at least in early versions of webos, console.* only accept a single argument
+			a$ = [a$.join(' ')];
+		}
+		var fn$ = console[fn];
+		if (fn$ && fn$.apply) {
+			// some consoles support 'warn', 'info', and so on
+			fn$.apply(console, a$);
+		} else if (console.log.apply) {
+			// some consoles support console.log.apply
+			console.log.apply(console, a$);
+		} else {
+			// otherwise, do our own formatting
+			console.log(a$.join(' '));
+		}
+	},
+
+	/**
+	* This is exposed elsewhere.
+	*
+	* @private
+	*/
+	log: function (fn, args) {
+
+		if (fn != 'log' && fn != 'warn' && fn != 'error') {
+			args = Array.prototype.slice.call(arguments);
+			fn = 'log';
+		}
+
+		var console = global.console;
+		if (typeof console !== 'undefined') {
+			if (this.shouldLog(fn)) {
+				this._log(fn, args);
+			}
+		}
+	}
+};
+
+/**
+* Sets the log level to the given value. This will restrict the amount of output depending on
+* the settings. The higher the value, the more output that will be allowed. The default is
+* 99. The value, -1, would silence all logging, even 'error' (0).
+* Without the 'see': {@link module:enyo/logger#log}.
+*
+* @see module:enyo/logger#level
+* @see module:enyo/logger#log
+* @see module:enyo/logger#warn
+* @see module:enyo/logger#error
+* @param {Number} level - The level to set logging to.
+*/
+exports.setLogLevel = function (level) {
+	var ll = parseInt(level, 0);
+	if (isFinite(ll)) {
+		this.level = ll;
+	}
+};
+
+/**
+* A wrapper for [console.log()]{@glossary console.log}, compatible
+* across supported platforms. Will output only if the current
+* [log level]{@link module:enyo/logger#level} allows it. [Object]{@glossary Object}
+* parameters will be serialized via [JSON.stringify()]{@glossary JSON.stringify}
+* automatically.
+*
+* @utility
+* @see {@glossary console.log}
+* @param {...*} - The arguments to be logged.
+* @public
+*/
+
+/**
+* A wrapper for [console.warn()]{@glossary console.warn}, compatible
+* across supported platforms. Will output only if the current
+* [log level]{@link module:enyo/logger#level} allows it. [Object]{@glossary Object}
+* parameters will be serialized via [JSON.stringify()]{@glossary JSON.stringify}
+* automatically.
+*
+* @utility
+* @see {@glossary console.warn}
+* @param {...*} - The arguments to be logged.
+* @public
+*/
+exports.warn = function () {
+	this.log('warn', arguments);
+};
+
+/**
+* A wrapper for [console.error()]{@glossary console.error}, compatible
+* across supported platforms. Will output only if the current
+* [log level]{@link module:enyo/logger#level} allows it. [Object]{@glossary Object}
+* parameters will be serialized via [JSON.stringify()]{@glossary JSON.stringify}
+* automatically.
+*
+* @utility
+* @see {@glossary console.error}
+* @param {...*} - The arguments to be logged.
+* @public
+*/
+exports.error = function () {
+	this.log('error', arguments);
+};
+
+},{'./json':'enyo/json','./utils':'enyo/utils','./platform':'enyo/platform'}],'enyo/dom':[function (module,exports,global,require,request){
 /**
 * Contains methods for working with DOM
 * @module enyo/dom
@@ -2429,557 +2617,7 @@ dom.transition = (platform.ios || platform.android || platform.chrome || platfor
 		? '-moz-transition'
 		: 'transition';
 
-},{'./roots':'enyo/roots','./utils':'enyo/utils','./platform':'enyo/platform'}],'enyo/logger':[function (module,exports,global,require,request){
-require('enyo');
-
-var
-	json = require('./json'),
-	utils = require('./utils'),
-	platform = require('./platform');
-
-/**
-* These platforms only allow one argument for [console.log()]{@glossary console.log}:
-*
-* * android
-* * ios
-* * webos
-*
-* @ignore
-*/
-var dumbConsole = Boolean(platform.android || platform.ios || platform.webos);
-
-/**
-* Internally used methods and properties associated with logging.
-*
-* @module enyo/logger
-* @public
-*/
-exports = module.exports = {
-
-	/**
-	* The log level to use. Can be a value from -1 to 99, where -1 disables all
-	* logging, 0 is 'error', 10 is 'warn', and 20 is 'log'. It is preferred that
-	* this value be set using the [setLogLevel()]{@link module:enyo/logger#setLogLevel}
-	* method.
-	*
-	* @type {Number}
-	* @default 99
-	* @public
-	*/
-	level: 99,
-
-	/**
-	* The known levels.
-	*
-	* @private
-	*/
-	levels: {log: 20, warn: 10, error: 0},
-
-	/**
-	* @private
-	*/
-	shouldLog: function (fn) {
-		var ll = parseInt(this.levels[fn], 0);
-		return (ll <= this.level);
-	},
-
-	/**
-	* @private
-	*/
-	validateArgs: function (args) {
-		// gracefully handle and prevent circular reference errors in objects
-		for (var i=0, l=args.length, item; (item=args[i]) || i<l; i++) {
-			try {
-				if (typeof item === 'object') {
-					args[i] = json.stringify(item);
-				}
-			} catch (e) {
-				args[i] = 'Error: ' + e.message;
-			}
-		}
-	},
-
-	/**
-	* @private
-	*/
-	_log: function (fn, args) {
-		// avoid trying to use console on IE instances where the object hasn't been
-		// created due to the developer tools being unopened
-		var console = global.console;
-		if (typeof console === 'undefined') {
-            return;
-        }
-		//var a$ = utils.logging.formatArgs(fn, args);
-		var a$ = utils.isArray(args) ? args : utils.cloneArray(args);
-		if (platform.androidFirefox) {
-			// Firefox for Android's console does not handle objects with circular references
-			this.validateArgs(a$);
-		}
-		if (dumbConsole) {
-			// at least in early versions of webos, console.* only accept a single argument
-			a$ = [a$.join(' ')];
-		}
-		var fn$ = console[fn];
-		if (fn$ && fn$.apply) {
-			// some consoles support 'warn', 'info', and so on
-			fn$.apply(console, a$);
-		} else if (console.log.apply) {
-			// some consoles support console.log.apply
-			console.log.apply(console, a$);
-		} else {
-			// otherwise, do our own formatting
-			console.log(a$.join(' '));
-		}
-	},
-
-	/**
-	* This is exposed elsewhere.
-	*
-	* @private
-	*/
-	log: function (fn, args) {
-
-		if (fn != 'log' && fn != 'warn' && fn != 'error') {
-			args = Array.prototype.slice.call(arguments);
-			fn = 'log';
-		}
-
-		var console = global.console;
-		if (typeof console !== 'undefined') {
-			if (this.shouldLog(fn)) {
-				this._log(fn, args);
-			}
-		}
-	}
-};
-
-/**
-* Sets the log level to the given value. This will restrict the amount of output depending on
-* the settings. The higher the value, the more output that will be allowed. The default is
-* 99. The value, -1, would silence all logging, even 'error' (0).
-* Without the 'see': {@link module:enyo/logger#log}.
-*
-* @see module:enyo/logger#level
-* @see module:enyo/logger#log
-* @see module:enyo/logger#warn
-* @see module:enyo/logger#error
-* @param {Number} level - The level to set logging to.
-*/
-exports.setLogLevel = function (level) {
-	var ll = parseInt(level, 0);
-	if (isFinite(ll)) {
-		this.level = ll;
-	}
-};
-
-/**
-* A wrapper for [console.log()]{@glossary console.log}, compatible
-* across supported platforms. Will output only if the current
-* [log level]{@link module:enyo/logger#level} allows it. [Object]{@glossary Object}
-* parameters will be serialized via [JSON.stringify()]{@glossary JSON.stringify}
-* automatically.
-*
-* @utility
-* @see {@glossary console.log}
-* @param {...*} - The arguments to be logged.
-* @public
-*/
-
-/**
-* A wrapper for [console.warn()]{@glossary console.warn}, compatible
-* across supported platforms. Will output only if the current
-* [log level]{@link module:enyo/logger#level} allows it. [Object]{@glossary Object}
-* parameters will be serialized via [JSON.stringify()]{@glossary JSON.stringify}
-* automatically.
-*
-* @utility
-* @see {@glossary console.warn}
-* @param {...*} - The arguments to be logged.
-* @public
-*/
-exports.warn = function () {
-	this.log('warn', arguments);
-};
-
-/**
-* A wrapper for [console.error()]{@glossary console.error}, compatible
-* across supported platforms. Will output only if the current
-* [log level]{@link module:enyo/logger#level} allows it. [Object]{@glossary Object}
-* parameters will be serialized via [JSON.stringify()]{@glossary JSON.stringify}
-* automatically.
-*
-* @utility
-* @see {@glossary console.error}
-* @param {...*} - The arguments to be logged.
-* @public
-*/
-exports.error = function () {
-	this.log('error', arguments);
-};
-
-},{'./json':'enyo/json','./utils':'enyo/utils','./platform':'enyo/platform'}],'enyo/HTMLStringDelegate':[function (module,exports,global,require,request){
-require('enyo');
-
-var
-	Dom = require('./dom');
-
-var selfClosing = {img: 1, hr: 1, br: 1, area: 1, base: 1, basefont: 1, input: 1, link: 1,
-	meta: 1, command: 1, embed: 1, keygen: 1, wbr: 1, param: 1, source: 1, track: 1, col: 1};
-
-/**
-* This is the default render delegate used by {@link module:enyo/Control~Control}. It
-* generates the HTML [string]{@glossary String} content and correctly inserts
-* it into the DOM. A string-concatenation technique is used to perform DOM
-* insertion in batches.
-*
-* @module enyo/HTMLStringDelegate
-* @public
-*/
-module.exports = {
-	
-	/**
-	* @private
-	*/
-	invalidate: function (control, item) {
-		switch (item) {
-		case 'content':
-			this.renderContent(control);
-			break;
-		default:
-			control.tagsValid = false;
-			break;
-		}
-	},
-	
-	/**
-	* @private
-	*/
-	render: function (control) {
-		if (control.parent) {
-			control.parent.beforeChildRender(control);
-			
-			if (!control.parent.generated) return;
-			if (control.tag === null) return control.parent.render();
-		}
-		
-		if (!control.hasNode()) this.renderNode(control);
-		if (control.hasNode()) {
-			this.renderDom(control);
-			if (control.generated) control.rendered();
-		}
-	},
-	
-	/**
-	* @private
-	*/
-	renderInto: function (control, parentNode) {
-		parentNode.innerHTML = this.generateHtml(control);
-		
-		if (control.generated) control.rendered();
-	},
-	
-	/**
-	* @private
-	*/
-	renderNode: function (control) {
-		this.teardownRender(control);
-		control.node = document.createElement(control.tag);
-		control.addNodeToParent();
-		control.set('generated', true);
-	},
-	
-	/**
-	* @private
-	*/
-	renderDom: function (control) {
-		this.renderAttributes(control);
-		this.renderStyles(control);
-		this.renderContent(control);
-	},
-	
-	/**
-	* @private
-	*/
-	renderStyles: function (control) {
-		var style = control.style;
-		
-		// we can safely do this knowing it will synchronize properly without a double
-		// set in the DOM because we're flagging the internal property
-		if (control.hasNode()) {
-			control.node.style.cssText = style;
-			// retrieve the parsed value for synchronization
-			control.cssText = style = control.node.style.cssText;
-			// now we set it knowing they will be synchronized and everybody that is listening
-			// will also be updated to know about the change
-			control.set('style', style);
-		}
-	},
-	
-	/**
-	* @private
-	*/
-	renderAttributes: function (control) {
-		var attrs = control.attributes,
-			node = control.hasNode(),
-			key,
-			val;
-		
-		if (node) {
-			for (key in attrs) {
-				val = attrs[key];
-				if (val === null || val === false || val === "") {
-					node.removeAttribute(key);
-				} else {
-					node.setAttribute(key, val);
-				}
-			}
-		}
-	},
-	
-	/**
-	* @private
-	*/
-	renderContent: function (control) {
-		if (control.generated) this.teardownChildren(control);
-		if (control.hasNode()) control.node.innerHTML = this.generateInnerHtml(control);
-	},
-	
-	/**
-	* @private
-	*/
-	generateHtml: function (control) {
-		var content,
-			html;
-		
-		if (control.canGenerate === false) {
-			return '';
-		}
-		// do this first in case content generation affects outer html (styles or attributes)
-		content = this.generateInnerHtml(control);
-		// generate tag, styles, attributes
-		html = this.generateOuterHtml(control, content);
-		// NOTE: 'generated' is used to gate access to findNodeById in
-		// hasNode, because findNodeById is expensive.
-		// NOTE: we typically use 'generated' to mean 'created in DOM'
-		// but that has not actually happened at this point.
-		// We set 'generated = true' here anyway to avoid having to walk the
-		// control tree a second time (to set it later).
-		// The contract is that insertion in DOM will happen synchronously
-		// to generateHtml() and before anybody should be calling hasNode().
-		control.set('generated', true);
-		return html;
-	},
-	
-	/**
-	* @private
-	*/
-	generateOuterHtml: function (control, content) {
-		if (!control.tag) return content;
-		if (!control.tagsValid) this.prepareTags(control);
-		return control._openTag + content + control._closeTag;
-	},
-	
-	/**
-	* @private
-	*/
-	generateInnerHtml: function (control) {
-		var allowHtml = control.allowHtml,
-			content;
-		
-		// flow can alter the way that html content is rendered inside
-		// the container regardless of whether there are children.
-		control.flow();
-		if (control.children.length) return this.generateChildHtml(control);
-		else {
-			content = control.get('content');
-			return allowHtml ? content : Dom.escape(content);
-		}
-	},
-	
-	/**
-	* @private
-	*/
-	generateChildHtml: function (control) {
-		var child,
-			html = '',
-			i = 0,
-			delegate;
-		
-		for (; (child = control.children[i]); ++i) {
-			delegate = child.renderDelegate || this;
-			html += delegate.generateHtml(child);
-		}
-		
-		return html;
-	},
-	
-	/**
-	* @private
-	*/
-	prepareTags: function (control) {
-		var html = '';
-		
-		// open tag
-		html += '<' + control.tag + (control.style ? ' style="' + control.style + '"' : '');
-		html += this.attributesToHtml(control.attributes);
-		if (selfClosing[control.tag]) {
-			control._openTag = html + '/>';
-			control._closeTag = '';
-		} else {
-			control._openTag = html + '>';
-			control._closeTag = '</' + control.tag + '>';
-		}
-		
-		control.tagsValid = true;
-	},
-	
-	/**
-	* @private
-	*/
-	attributesToHtml: function(attrs) {
-		var key,
-			val,
-			html = '';
-			
-		for (key in attrs) {
-			val = attrs[key];
-			if (val != null && val !== false && val !== '') {
-				html += ' ' + key + '="' + this.escapeAttribute(val) + '"';
-			}
-		}
-		
-		return html;
-	},
-	
-	/**
-	* @private
-	*/
-	escapeAttribute: function (text) {
-		if (typeof text != 'string') return text;
-	
-		return String(text).replace(/&/g, '&amp;').replace(/\"/g, '&quot;');
-	},
-	
-	/**
-	* @private
-	*/
-	teardownRender: function (control, cache) {
-		if (control.generated) {
-			if (typeof control.beforeTeardown === 'function') {
-				control.beforeTeardown();
-			}
-			this.teardownChildren(control, cache);
-		}
-			
-		control.node = null;
-		control.set('generated', false);
-	},
-	
-	/**
-	* @private
-	*/
-	teardownChildren: function (control, cache) {
-		var child,
-			i = 0;
-
-		for (; (child = control.children[i]); ++i) {
-			child.teardownRender(cache);
-		}
-	}
-};
-
-},{'./dom':'enyo/dom'}],'enyo/gesture/util':[function (module,exports,global,require,request){
-var
-	dom = require('../dom'),
-	platform = require('../platform'),
-	utils = require('../utils');
-
-/**
-* Used internally by {@link module:enyo/gesture}
-*
-* @module enyo/gesture/util
-* @private
-*/
-module.exports = {
-
-	/**
-	* @private
-	*/
-	eventProps: ['target', 'relatedTarget', 'clientX', 'clientY', 'pageX', 'pageY',
-		'screenX', 'screenY', 'altKey', 'ctrlKey', 'metaKey', 'shiftKey',
-		'detail', 'identifier', 'dispatchTarget', 'which', 'srcEvent'],
-
-	/**
-	* Creates an {@glossary event} of type `type` and returns it.
-	* `evt` should be an event [object]{@glossary Object}.
-	*
-	* @param {String} type - The type of {@glossary event} to make.
-	* @param {(Event|Object)} evt - The event you'd like to clone or an object that looks like it.
-	* @returns {Object} The new event [object]{@glossary Object}.
-	* @public
-	*/
-	makeEvent: function(type, evt) {
-		var e = {};
-		e.type = type;
-		for (var i=0, p; (p=this.eventProps[i]); i++) {
-			e[p] = evt[p];
-		}
-		e.srcEvent = e.srcEvent || evt;
-		e.preventDefault = this.preventDefault;
-		e.disablePrevention = this.disablePrevention;
-
-		if (dom._bodyScaleFactorX !== 1 || dom._bodyScaleFactorY !== 1) {
-			// Intercept only these events, not all events, like: hold, release, tap, etc,
-			// to avoid doing the operation again.
-			if (e.type == 'move' || e.type == 'up' || e.type == 'down' || e.type == 'enter' || e.type == 'leave') {
-				e.clientX *= dom._bodyScaleFactorX;
-				e.clientY *= dom._bodyScaleFactorY;
-			}
-		}
-		//
-		// normalize event.which and event.pageX/event.pageY
-		// Note that while 'which' works in IE9, it is broken for mousemove. Therefore,
-		// in IE, use global.event.button
-		if (platform.ie < 10) {
-			var b = global.event && global.event.button;
-			if (b) {
-				// multi-button not supported, priority: left, right, middle
-				// (note: IE bitmask is 1=left, 2=right, 4=center);
-				e.which = b & 1 ? 1 : (b & 2 ? 2 : (b & 4 ? 3 : 0));
-			}
-		} else if (platform.webos || global.PalmSystem) {
-			// Temporary fix for owos: it does not currently supply 'which' on move events
-			// and the user agent string doesn't identify itself so we test for PalmSystem
-			if (e.which === 0) {
-				e.which = 1;
-			}
-		}
-		return e;
-	},
-
-	/**
-	* Installed on [events]{@glossary event} and called in event context.
-	*
-	* @private
-	*/
-	preventDefault: function() {
-		if (this.srcEvent) {
-			this.srcEvent.preventDefault();
-		}
-	},
-
-	/**
-	* @private
-	*/
-	disablePrevention: function() {
-		this.preventDefault = utils.nop;
-		if (this.srcEvent) {
-			this.srcEvent.preventDefault = utils.nop;
-		}
-	}
-};
-
-},{'../dom':'enyo/dom','../platform':'enyo/platform','../utils':'enyo/utils'}],'enyo/kind':[function (module,exports,global,require,request){
+},{'./roots':'enyo/roots','./utils':'enyo/utils','./platform':'enyo/platform'}],'enyo/kind':[function (module,exports,global,require,request){
 require('enyo');
 
 var
@@ -3487,7 +3125,369 @@ exports.createFromKind = function (nom, param) {
 	}
 };
 
-},{'./logger':'enyo/logger','./utils':'enyo/utils'}],'enyo/Control/floatingLayer':[function (module,exports,global,require,request){
+},{'./logger':'enyo/logger','./utils':'enyo/utils'}],'enyo/HTMLStringDelegate':[function (module,exports,global,require,request){
+require('enyo');
+
+var
+	Dom = require('./dom');
+
+var selfClosing = {img: 1, hr: 1, br: 1, area: 1, base: 1, basefont: 1, input: 1, link: 1,
+	meta: 1, command: 1, embed: 1, keygen: 1, wbr: 1, param: 1, source: 1, track: 1, col: 1};
+
+/**
+* This is the default render delegate used by {@link module:enyo/Control~Control}. It
+* generates the HTML [string]{@glossary String} content and correctly inserts
+* it into the DOM. A string-concatenation technique is used to perform DOM
+* insertion in batches.
+*
+* @module enyo/HTMLStringDelegate
+* @public
+*/
+module.exports = {
+	
+	/**
+	* @private
+	*/
+	invalidate: function (control, item) {
+		switch (item) {
+		case 'content':
+			this.renderContent(control);
+			break;
+		default:
+			control.tagsValid = false;
+			break;
+		}
+	},
+	
+	/**
+	* @private
+	*/
+	render: function (control) {
+		if (control.parent) {
+			control.parent.beforeChildRender(control);
+			
+			if (!control.parent.generated) return;
+			if (control.tag === null) return control.parent.render();
+		}
+		
+		if (!control.hasNode()) this.renderNode(control);
+		if (control.hasNode()) {
+			this.renderDom(control);
+			if (control.generated) control.rendered();
+		}
+	},
+	
+	/**
+	* @private
+	*/
+	renderInto: function (control, parentNode) {
+		parentNode.innerHTML = this.generateHtml(control);
+		
+		if (control.generated) control.rendered();
+	},
+	
+	/**
+	* @private
+	*/
+	renderNode: function (control) {
+		this.teardownRender(control);
+		control.node = document.createElement(control.tag);
+		control.addNodeToParent();
+		control.set('generated', true);
+	},
+	
+	/**
+	* @private
+	*/
+	renderDom: function (control) {
+		this.renderAttributes(control);
+		this.renderStyles(control);
+		this.renderContent(control);
+	},
+	
+	/**
+	* @private
+	*/
+	renderStyles: function (control) {
+		var style = control.style;
+		
+		// we can safely do this knowing it will synchronize properly without a double
+		// set in the DOM because we're flagging the internal property
+		if (control.hasNode()) {
+			control.node.style.cssText = style;
+			// retrieve the parsed value for synchronization
+			control.cssText = style = control.node.style.cssText;
+			// now we set it knowing they will be synchronized and everybody that is listening
+			// will also be updated to know about the change
+			control.set('style', style);
+		}
+	},
+	
+	/**
+	* @private
+	*/
+	renderAttributes: function (control) {
+		var attrs = control.attributes,
+			node = control.hasNode(),
+			key,
+			val;
+		
+		if (node) {
+			for (key in attrs) {
+				val = attrs[key];
+				if (val === null || val === false || val === "") {
+					node.removeAttribute(key);
+				} else {
+					node.setAttribute(key, val);
+				}
+			}
+		}
+	},
+	
+	/**
+	* @private
+	*/
+	renderContent: function (control) {
+		if (control.generated) this.teardownChildren(control);
+		if (control.hasNode()) control.node.innerHTML = this.generateInnerHtml(control);
+	},
+	
+	/**
+	* @private
+	*/
+	generateHtml: function (control) {
+		var content,
+			html;
+		
+		if (control.canGenerate === false) {
+			return '';
+		}
+		// do this first in case content generation affects outer html (styles or attributes)
+		content = this.generateInnerHtml(control);
+		// generate tag, styles, attributes
+		html = this.generateOuterHtml(control, content);
+		// NOTE: 'generated' is used to gate access to findNodeById in
+		// hasNode, because findNodeById is expensive.
+		// NOTE: we typically use 'generated' to mean 'created in DOM'
+		// but that has not actually happened at this point.
+		// We set 'generated = true' here anyway to avoid having to walk the
+		// control tree a second time (to set it later).
+		// The contract is that insertion in DOM will happen synchronously
+		// to generateHtml() and before anybody should be calling hasNode().
+		control.set('generated', true);
+		return html;
+	},
+	
+	/**
+	* @private
+	*/
+	generateOuterHtml: function (control, content) {
+		if (!control.tag) return content;
+		if (!control.tagsValid) this.prepareTags(control);
+		return control._openTag + content + control._closeTag;
+	},
+	
+	/**
+	* @private
+	*/
+	generateInnerHtml: function (control) {
+		var allowHtml = control.allowHtml,
+			content;
+		
+		// flow can alter the way that html content is rendered inside
+		// the container regardless of whether there are children.
+		control.flow();
+		if (control.children.length) return this.generateChildHtml(control);
+		else {
+			content = control.get('content');
+			return allowHtml ? content : Dom.escape(content);
+		}
+	},
+	
+	/**
+	* @private
+	*/
+	generateChildHtml: function (control) {
+		var child,
+			html = '',
+			i = 0,
+			delegate;
+		
+		for (; (child = control.children[i]); ++i) {
+			delegate = child.renderDelegate || this;
+			html += delegate.generateHtml(child);
+		}
+		
+		return html;
+	},
+	
+	/**
+	* @private
+	*/
+	prepareTags: function (control) {
+		var html = '';
+		
+		// open tag
+		html += '<' + control.tag + (control.style ? ' style="' + control.style + '"' : '');
+		html += this.attributesToHtml(control.attributes);
+		if (selfClosing[control.tag]) {
+			control._openTag = html + '/>';
+			control._closeTag = '';
+		} else {
+			control._openTag = html + '>';
+			control._closeTag = '</' + control.tag + '>';
+		}
+		
+		control.tagsValid = true;
+	},
+	
+	/**
+	* @private
+	*/
+	attributesToHtml: function(attrs) {
+		var key,
+			val,
+			html = '';
+			
+		for (key in attrs) {
+			val = attrs[key];
+			if (val != null && val !== false && val !== '') {
+				html += ' ' + key + '="' + this.escapeAttribute(val) + '"';
+			}
+		}
+		
+		return html;
+	},
+	
+	/**
+	* @private
+	*/
+	escapeAttribute: function (text) {
+		if (typeof text != 'string') return text;
+	
+		return String(text).replace(/&/g, '&amp;').replace(/\"/g, '&quot;');
+	},
+	
+	/**
+	* @private
+	*/
+	teardownRender: function (control, cache) {
+		if (control.generated) {
+			if (typeof control.beforeTeardown === 'function') {
+				control.beforeTeardown();
+			}
+			this.teardownChildren(control, cache);
+		}
+			
+		control.node = null;
+		control.set('generated', false);
+	},
+	
+	/**
+	* @private
+	*/
+	teardownChildren: function (control, cache) {
+		var child,
+			i = 0;
+
+		for (; (child = control.children[i]); ++i) {
+			child.teardownRender(cache);
+		}
+	}
+};
+
+},{'./dom':'enyo/dom'}],'enyo/gesture/util':[function (module,exports,global,require,request){
+var
+	dom = require('../dom'),
+	platform = require('../platform'),
+	utils = require('../utils');
+
+/**
+* Used internally by {@link module:enyo/gesture}
+*
+* @module enyo/gesture/util
+* @private
+*/
+module.exports = {
+
+	/**
+	* @private
+	*/
+	eventProps: ['target', 'relatedTarget', 'clientX', 'clientY', 'pageX', 'pageY',
+		'screenX', 'screenY', 'altKey', 'ctrlKey', 'metaKey', 'shiftKey',
+		'detail', 'identifier', 'dispatchTarget', 'which', 'srcEvent'],
+
+	/**
+	* Creates an {@glossary event} of type `type` and returns it.
+	* `evt` should be an event [object]{@glossary Object}.
+	*
+	* @param {String} type - The type of {@glossary event} to make.
+	* @param {(Event|Object)} evt - The event you'd like to clone or an object that looks like it.
+	* @returns {Object} The new event [object]{@glossary Object}.
+	* @public
+	*/
+	makeEvent: function(type, evt) {
+		var e = {};
+		e.type = type;
+		for (var i=0, p; (p=this.eventProps[i]); i++) {
+			e[p] = evt[p];
+		}
+		e.srcEvent = e.srcEvent || evt;
+		e.preventDefault = this.preventDefault;
+		e.disablePrevention = this.disablePrevention;
+
+		if (dom._bodyScaleFactorX !== 1 || dom._bodyScaleFactorY !== 1) {
+			// Intercept only these events, not all events, like: hold, release, tap, etc,
+			// to avoid doing the operation again.
+			if (e.type == 'move' || e.type == 'up' || e.type == 'down' || e.type == 'enter' || e.type == 'leave') {
+				e.clientX *= dom._bodyScaleFactorX;
+				e.clientY *= dom._bodyScaleFactorY;
+			}
+		}
+		//
+		// normalize event.which and event.pageX/event.pageY
+		// Note that while 'which' works in IE9, it is broken for mousemove. Therefore,
+		// in IE, use global.event.button
+		if (platform.ie < 10) {
+			var b = global.event && global.event.button;
+			if (b) {
+				// multi-button not supported, priority: left, right, middle
+				// (note: IE bitmask is 1=left, 2=right, 4=center);
+				e.which = b & 1 ? 1 : (b & 2 ? 2 : (b & 4 ? 3 : 0));
+			}
+		} else if (platform.webos || global.PalmSystem) {
+			// Temporary fix for owos: it does not currently supply 'which' on move events
+			// and the user agent string doesn't identify itself so we test for PalmSystem
+			if (e.which === 0) {
+				e.which = 1;
+			}
+		}
+		return e;
+	},
+
+	/**
+	* Installed on [events]{@glossary event} and called in event context.
+	*
+	* @private
+	*/
+	preventDefault: function() {
+		if (this.srcEvent) {
+			this.srcEvent.preventDefault();
+		}
+	},
+
+	/**
+	* @private
+	*/
+	disablePrevention: function() {
+		this.preventDefault = utils.nop;
+		if (this.srcEvent) {
+			this.srcEvent.preventDefault = utils.nop;
+		}
+	}
+};
+
+},{'../dom':'enyo/dom','../platform':'enyo/platform','../utils':'enyo/utils'}],'enyo/Control/floatingLayer':[function (module,exports,global,require,request){
 /**
 * Exports the {@link module:enyo/Control/floatingLayer~FloatingLayer} singleton instance.
 * @module enyo/Control/floatingLayer
@@ -12725,7 +12725,261 @@ Control.floatingLayer = new Control.FloatingLayer({id: 'floatingLayer'});
 */
 Control.Fullscreen = fullscreen(Control);
 
-},{'../kind':'enyo/kind','../utils':'enyo/utils','../platform':'enyo/platform','../dispatcher':'enyo/dispatcher','../options':'enyo/options','../roots':'enyo/roots','../AccessibilitySupport':'enyo/AccessibilitySupport','../UiComponent':'enyo/UiComponent','../HTMLStringDelegate':'enyo/HTMLStringDelegate','../dom':'enyo/dom','./fullscreen':'enyo/Control/fullscreen','./floatingLayer':'enyo/Control/floatingLayer','../gesture':'enyo/gesture'}]
+},{'../kind':'enyo/kind','../utils':'enyo/utils','../platform':'enyo/platform','../dispatcher':'enyo/dispatcher','../options':'enyo/options','../roots':'enyo/roots','../AccessibilitySupport':'enyo/AccessibilitySupport','../UiComponent':'enyo/UiComponent','../HTMLStringDelegate':'enyo/HTMLStringDelegate','../dom':'enyo/dom','./fullscreen':'enyo/Control/fullscreen','./floatingLayer':'enyo/Control/floatingLayer','../gesture':'enyo/gesture'}],'enyo/Repeater':[function (module,exports,global,require,request){
+require('enyo');
+
+/**
+* Contains the declaration for the {@link module:enyo/Repeater~Repeater} kind.
+* @module enyo/Repeater
+*/
+
+var
+	kind = require('./kind'),
+	utils = require('./utils');
+var
+	Control = require('./Control');
+
+/**
+* The extended {@glossary event} [object]{@glossary Object} that is provided
+* when the [onSetupItem]{@link module:enyo/Repeater~Repeater#onSetupItem} event is fired.
+*
+* @typedef {Object} module:enyo/Repeater~Repeater~SetupItemEvent
+* @property {Number} index - The item's index.
+* @property {Object} item - The item control, for decoration.
+*/
+
+/**
+* Fires when each item is created.
+*
+* @event module:enyo/Repeater~Repeater#onSetupItem
+* @type {Object}
+* @property {Object} sender - The [component]{@link module:enyo/Component~Component} that most recently
+*	propagated the {@glossary event}.
+* @property {module:enyo/Repeater~Repeater~SetupItemEvent} event - An [object]{@glossary Object} containing
+*	event information.
+* @public
+*/
+	
+/**
+* Sometimes client [controls]{@link module:enyo/Control~Control} are intermediated with null-controls.
+* These overrides reroute [events]{@glossary event} from such controls to the nominal
+* [delegate]{@glossary delegate}, as would happen in the absence of intermediation.
+* 
+* @class OwnerProxy
+* @extends module:enyo/Control~Control
+* @private
+*/
+var OwnerProxy = kind(
+	/** @lends module:enyo/OwnerProxy~OwnerProxy.prototype */ {
+
+	/**
+	* @private
+	*/
+	kind: Control,
+
+	/**
+	* @private
+	*/
+	tag: null,
+
+	/**
+	* @method
+	* @private
+	*/
+	decorateEvent: kind.inherit(function (sup) {
+		return function(inEventName, inEvent, inSender) {
+			if (inEvent) {
+				// preserve an existing index property.
+				if (utils.exists(inEvent.index)) {
+					// if there are nested indices, store all of them in an array
+					// but leave the innermost one in the index property
+					inEvent.indices = inEvent.indices || [inEvent.index];
+					inEvent.indices.push(this.index);
+				} else {
+					// for a single level, just decorate the index property
+					inEvent.index = this.index;
+				}
+				// update delegate during bubbling to account for proxy
+				// by moving the delegate up to the repeater level
+				if (inEvent.delegate && inEvent.delegate.owner === this) {
+					inEvent.delegate = this.owner;
+				}
+			}
+			sup.apply(this, arguments);
+		};
+	})
+});
+
+/**
+* {@link module:enyo/Repeater~Repeater} is a simple [control]{@link module:enyo/Control~Control} for making lists of items.
+*
+* The [components]{@link module:enyo/Component~Component} of a repeater are copied for each item created,
+* and are wrapped in a control that keeps the state of the item index.
+* 
+* ```javascript
+* var
+* 	kind = require('enyo/kind'),
+* 	Image = require('enyo/Image'),
+* 	Repeater = require('enyo/Repeater');
+*
+* {kind: Repeater, count: 2, onSetupItem: 'setImageSource', components: [
+* 	{kind: Image}
+* ]}
+*
+* setImageSource: function(inSender, inEvent) {
+* 	var index = inEvent.index;
+* 	var item = inEvent.item;
+* 	item.$.image.setSrc(this.imageSources[index]);
+* 	return true;
+* }
+* ```
+*
+* Be sure to return `true` from your `onSetupItem` handler to avoid having other 
+* {@glossary event} handlers further up the tree try to modify your item control.
+* 
+* For more information, see the documentation on
+* [Lists]{@linkplain $dev-guide/building-apps/layout/lists.html} in the
+* Enyo Developer Guide.
+*
+* @class Repeater
+* @extends module:enyo/Control~Control
+* @ui
+* @public
+*/
+module.exports = kind(
+	/** @lends module:enyo/Repeater~Repeater.prototype */ {
+
+	/**
+	* @private
+	*/
+	name: 'enyo.Repeater',
+
+	/**
+	* @private
+	*/
+	kind: Control,
+
+	/**
+	* @private
+	*/
+	published: 
+		/** @lends module:enyo/Repeater~Repeater.prototype */ {
+		
+		/**
+		* The number of items to be repeated.
+		* 
+		* @type {Number}
+		* @default 0
+		* @public
+		*/
+		count: 0
+	},
+
+	/**
+	* @private
+	*/
+	events: {
+		onSetupItem: ''
+	},
+
+	/**
+	* @method
+	* @private
+	*/
+	create: kind.inherit(function (sup) {
+		return function() {
+			sup.apply(this, arguments);
+			this.countChanged();
+		};
+	}),
+	
+	/**
+	* @method
+	* @private
+	*/
+	initComponents: kind.inherit(function (sup) {
+		return function() {
+			this.itemComponents = this.components || this.kindComponents;
+			this.components = this.kindComponents = null;
+			sup.apply(this, arguments);
+		};
+	}),
+
+	/**
+	* @private
+	*/
+	countChanged: function () {
+		this.build();
+	},
+
+	/**
+	* @private
+	*/
+	itemAtIndex: function (idx) {
+		return this.controlAtIndex(idx);
+	},
+
+	/** 
+	* Renders the [collection]{@link module:enyo/Collection~Collection} of items. This will delete any
+	* existing items and recreate the [repeater]{@link module:enyo/Repeater~Repeater} if called after
+	* the repeater has been rendered. This is called automatically when the
+	* [count]{@link module:enyo/Repeater~Repeater#count} property changes. To set the `count` property
+	* and force a re-render, such as when a [data model]{@link module:enyo/Model~Model} changes,
+	* use `set('count', newCount, true)`, where the last parameter forces the change
+	* handler to be called, even if the `count` remains the same.
+	*
+	* @fires module:enyo/Repeater~Repeater#onSetupItem
+	* @public
+	*/
+	build: function () {
+		this.destroyClientControls();
+		for (var i=0, c; i<this.count; i++) {
+			c = this.createComponent({kind: OwnerProxy, index: i});
+			// do this as a second step so 'c' is the owner of the created components
+			c.createComponents(this.itemComponents);
+			// invoke user's setup code
+			this.doSetupItem({index: i, item: c});
+		}
+		this.render();
+	},
+	/**
+	* Renders a specific item in the [collection]{@link module:enyo/Collection~Collection}. This does not
+	* destroy the item, but just calls the `onSetupItem` {@glossary event} handler again
+	* for it, so any state stored in the item is preserved.
+	*
+	* @param {Number} idx - The index of the item to render.
+	* @fires module:enyo/Repeater~Repeater#onSetupItem
+	* @public
+	*/
+	renderRow: function (idx) {
+		var c = this.itemAtIndex(idx);
+		this.doSetupItem({index: idx, item: c});
+	},
+
+	/**
+	* A legacy method that sets the number of items to be repeated and effectively forces a 
+	* rebuild of the [repeater]{@link module:enyo/Repeater~Repeater}, regardless of whether or not the count has
+	* changed.
+	*
+	* @param {Number} count - The number of items to be repeated.
+	* @public
+	*/
+	setCount: function (count) {
+		this.set('count', count, {force: true});
+	},
+
+	// Accessibility
+
+	/**
+	* @default list
+	* @type {String}
+	* @see enyo/AccessibilitySupport~AccessibilitySupport#accessibilityRole
+	* @public
+	*/
+	accessibilityRole: 'list'
+});
+
+},{'./kind':'enyo/kind','./utils':'enyo/utils','./Control':'enyo/Control'}]
 	};
 
 });

@@ -4,7 +4,7 @@
         <script src="/home/jaykim/node_modules/jquery/dist/jquery.min.js"></script>
         <title>JQuery Example</title>
         <style>
-            bodyfont{ font-family:Arial, Helvetica, sans-serif; font-size: 12px; margin-top:20px; }
+            bodyfont{ font-family:'Times New Roman', Times, serif; font-size: 12px; margin-top:20px; }
             #f_wrap { font-weight: bold; margin-top: 10px; }
             #txt_wrap { width: 90%; margin-top:20px; }
         </style>
@@ -14,9 +14,9 @@
             <dl>
                 <dt>Font Size</dt>
                 <dd class="zoom">
-                    <button>+</button>
-                    <button>0</button>
                     <button>-</button>
+                    <button>0</button>
+                    <button>+</button>
                 </dd>
                 <dt>Font Type</dt>
                 <dd class="f_style">
@@ -27,7 +27,7 @@
             </dl>
         </div>
         <p id="txt_wrap">
-            Keyboard is the tool to....
+            This is a test message...
         </p>
 
         <script>
@@ -35,15 +35,15 @@
                 var size = 12;
                 var body = $("body");
 
-                $(".zoom button").on("clic", function() {
+                $(".zoom button").on("click", function() {
                     var btn_index = $(".zoom button").index(this);
 
                     if(btn_index == 0) {
-                        size++;
+                        size--;
                         body.css("font-size", size+"px");
                     }
                     else if(btn_index == 2) {
-                        size--;
+                        size++;
                         body.css("font-size", size+"px");
                     }
                     else {

@@ -1,0 +1,31 @@
+<html>
+    <head>
+        <script src="/home/jaykim/node_modules/jquery/dist/jquery.min.js"></script>
+        <title>JQuery Example</title>
+
+        <style>
+            h1 { width: 50px; height: 30px; background-color: red; font-size: 100% }
+            h2 { width: 50px; height: 30px; background-color: orange; font-size: 100% }
+        </style>
+    </head>
+    <body>
+        <h1>User1</h1>
+        <h2>User2</h2>
+
+        <script>
+            $(function() {
+                $("h1").animate({
+                    marginLeft: "250px"
+                }, 6000, function() {
+                    alert('Arrived!!');
+                });
+
+                $("h2").animate({
+                    marginLeft: "250px",
+                    opacity: 0.3,
+                    //width: "100px"
+                }, 5000);
+            })
+        </script>
+    </body>
+</html>
