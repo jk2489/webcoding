@@ -4,32 +4,48 @@
         <script src="/home/jaykim/node_modules/angular/angular.min.js"></script>
         <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
         <title>Angular Example</title>
+        <style>
+            div {
+                text-align: center;
+            }
+            p {
+                font-weight: bold;
+            }
+        </style>
     </head>
     <body>
-        <script>
-            var app = angular.module("myShoppingList", []);
-            app.controller("myCtrl", function($scope) {
-                $scope.products = ["Milk", "Bread"];
-                $scope.addItem = function() {
-                    $scope.errortext= $scope.addMe + " is added in the list";
-                    if(!$scope.addMe) {
-                        return;
+            <script>
+                var app = angular.module("myShoppingList", []);
+                app.controller("myCtrl", function ($scope) {
+                    $scope.products = [];
+                    //alert("Shopping list is empty!!")
+                    $scope.addItem = function () {
+                        $scope.errortext = $scope.addMe + " is added in the list!";
+                        if (!$scope.addMe) {
+                            //$scope.errortext = "Please Add your items!!"
+                            $scope.errortext = "";
+                            alert("Please add your items!!");
+                            return;
+                        }
+                        if ($scope.products.indexOf($scope.addMe) == -1) {
+                            $scope.products.push($scope.addMe);
+                            $scope.addMe = "";
+                        }
+                        else {
+                            $scope.errortext = $scope.addMe + " is already in the list!";
+                            $scope.addMe = "";
+                        }
                     }
-                    if($scope.products.indexOf($scope.addMe) == -1) {
-                        $scope.products.push($scope.addMe);
-                        $scope.addMe = "";
+                    $scope.removeItem = function (x) {
+                        $scope.errortext = $scope.products[x] + " is deleted in the list!";
+                        $scope.products.splice(x, 1);
+
+                        if ($scope.products.length == 0) {
+                            alert("Your shopping list is empty!!!")
+                        }
                     }
-                    else {
-                        $scope.errortext = $scope.addMe + " is already in the list";
-                        $scope.addMe = "";
-                    }
-                }
-                $scope.removeItem = function(x) {
-                    $scope.errortext = $scope.products.indexOf(x) + " is removed in the list";
-                    $scope.products.splice(x, 1);
-                }
-            });
-        </script>
+                });
+            </script>
 
         <div ng-app="myShoppingList" ng-controller="myCtrl" class="w3-card-2 w3-margin" style="max-width: 400px;">
             <header class="w3-container w3-light-grey w3-padding-16">
