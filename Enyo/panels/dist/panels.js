@@ -86,51 +86,29 @@
 
 var ready = require('enyo/ready');
 var Control = require('enyo/Control');
-var kind = require('enyo/kind');
-var List = require('layout/List');
-var Input = require('enyo/Input');
+var FittableRows = require('layout/FittableRows');
+var CollapsingArranger = require('layout/CollapsingArranger');
 
-var ListSample = Control.kind({
-	//name: "ListSample",
-	kind: "List",
-	count: 1000,
-	items: [],
-	handlers: {
-		onSetupItem: "setupItem"
-	},
+var PanelsSample = Control.kind({
+	//name: "PanelsSample",
+	kind: "FittableRows",
 	components: [
-		{ name: "text", kind: "Input", ontap: "tapped", onchange: "changed", onblur: "blur" }
-	],
-	create: function() {
-		this.inherited(arguments);
-		for(var i = 0; i < this.count; i++) {
-			this.items[i] = "This is row " + i;
-		}
-	},
-	setupItem: function(inSender, inEvent) {
-		this.$.text.setValue(this.items[inEvent.index]);
-		return(true);
-	},
-	tapped: function(inSender, inEvent) {
-		this.prepareRow(inEvent.index);
-		this.$.text.setValue(this.items[inEvent.index]);
-		this.$.text.focus();
-		return(true);
-	},
-	changed: function(inSender, inEvent) {
-		this.items[inEvent.index] = inSender.getValue();
-	},
-	blur: function(inSender, inEvent) {
-		this.lockRow();
-	}
+		{kind: "Panels", fit: true, arrangerKind: "CollapsingArranger", 
+		classes: "panels-sample", narrowFit: false,
+		components: [
+			{name: "panel1", style: "background-color: blue"},
+			{name: "panel2", style: "background-color: red"},
+			{name: "panel3", style: "background-color: green"}
+		]}
+	]
 });
 
 ready(function() {
-	new ListSample().renderInto(document.body);
+	new PanelsSample().renderInto(document.body);
 });
 
 }]
 	};
 
 });
-//# sourceMappingURL=list-proj.js.map
+//# sourceMappingURL=panels.js.map

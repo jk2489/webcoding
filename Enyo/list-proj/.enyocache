@@ -1295,7 +1295,7 @@
     "packageFile": "/home/jaykim/webcoding/Enyo/list-proj/package.json",
     "mtime": {
       "/home/jaykim/webcoding/Enyo/list-proj/package.json": 1518771456952,
-      "/home/jaykim/webcoding/Enyo/list-proj/index.js": 1518826650780
+      "/home/jaykim/webcoding/Enyo/list-proj/index.js": 1518826783612
     },
     "json": {
       "name": "list-proj",
@@ -1306,14 +1306,13 @@
       "moduleDir": "src"
     },
     "main": "/home/jaykim/webcoding/Enyo/list-proj/index.js",
-    "contents": "// This is the default \"main\" file, specified from the root package.json file\n// The ready function is excuted when the DOM is ready for usage.\n\nvar ready = require('enyo/ready');\nvar Control = require('enyo/Control');\nvar kind = require('enyo/kind');\nvar components = require('enyo/Component');\nvar List = require('layout/List');\nvar Input = require('enyo/Input');\n\nvar ListSample = Control.kind({\n\t//name: \"ListSample\",\n\tkind: \"List\",\n\tcount: 1000,\n\titems: [],\n\thandlers: {\n\t\tonSetupItem: \"setupItem\"\n\t},\n\tcomponents: [\n\t\t{ name: \"text\", kind: \"Input\", ontap: \"tapped\", onchange: \"changed\", onblur: \"blur\" }\n\t],\n\tcreate: function() {\n\t\tthis.inherited(arguments);\n\t\tfor(var i = 0; i < this.count; i++) {\n\t\t\tthis.items[i] = \"This is row \" + i;\n\t\t}\n\t},\n\tsetupItem: function(inSender, inEvent) {\n\t\tthis.$.text.setValue(this.items[inEvent.index]);\n\t\treturn(true);\n\t},\n\ttapped: function(inSender, inEvent) {\n\t\tthis.prepareRow(inEvent.index);\n\t\tthis.$.text.setValue(this.items[inEvent.index]);\n\t\tthis.$.text.focus();\n\t\treturn(true);\n\t},\n\tchanged: function(inSender, inEvent) {\n\t\tthis.items[inEvent.index] = inSender.getValue();\n\t},\n\tblur: function(inSender, inEvent) {\n\t\tthis.lockRow();\n\t}\n});\n\nready(function() {\n\tnew ListSample().renderInto(document.body);\n});\n",
+    "contents": "// This is the default \"main\" file, specified from the root package.json file\n// The ready function is excuted when the DOM is ready for usage.\n\nvar ready = require('enyo/ready');\nvar Control = require('enyo/Control');\nvar kind = require('enyo/kind');\nvar List = require('layout/List');\nvar Input = require('enyo/Input');\n\nvar ListSample = Control.kind({\n\t//name: \"ListSample\",\n\tkind: \"List\",\n\tcount: 1000,\n\titems: [],\n\thandlers: {\n\t\tonSetupItem: \"setupItem\"\n\t},\n\tcomponents: [\n\t\t{ name: \"text\", kind: \"Input\", ontap: \"tapped\", onchange: \"changed\", onblur: \"blur\" }\n\t],\n\tcreate: function() {\n\t\tthis.inherited(arguments);\n\t\tfor(var i = 0; i < this.count; i++) {\n\t\t\tthis.items[i] = \"This is row \" + i;\n\t\t}\n\t},\n\tsetupItem: function(inSender, inEvent) {\n\t\tthis.$.text.setValue(this.items[inEvent.index]);\n\t\treturn(true);\n\t},\n\ttapped: function(inSender, inEvent) {\n\t\tthis.prepareRow(inEvent.index);\n\t\tthis.$.text.setValue(this.items[inEvent.index]);\n\t\tthis.$.text.focus();\n\t\treturn(true);\n\t},\n\tchanged: function(inSender, inEvent) {\n\t\tthis.items[inEvent.index] = inSender.getValue();\n\t},\n\tblur: function(inSender, inEvent) {\n\t\tthis.lockRow();\n\t}\n});\n\nready(function() {\n\tnew ListSample().renderInto(document.body);\n});\n",
     "nodeModules": false,
     "relPath": "/home/jaykim/webcoding/Enyo/list-proj",
     "requires": [
       "enyo/ready",
       "enyo/Control",
       "enyo/kind",
-      "enyo/Component",
       "layout/List",
       "enyo/Input"
     ],
