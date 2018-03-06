@@ -97,58 +97,101 @@ module.exports = (global.enyo && global.enyo.options) || {};
 exports = module.exports = require('./src/options');
 exports.version = '2.7.0';
 
-},{'./src/options':'enyo/options'}],'enyo/json':[function (module,exports,global,require,request){
+},{'./src/options':'enyo/options'}],'enyo/ready':[function (module,exports,global,require,request){
 require('enyo');
 
+// we need to register appropriately to know when
+// the document is officially ready, to ensure that
+// client code is only going to execute at the
+// appropriate time
+
+var doc = global.document;
+var queue = [];
+var ready = ("complete" === doc.readyState);
+var run;
+var init;
+var remove;
+var add;
+var flush;
+var flushScheduled = false;
 
 /**
-* [JSON]{@glossary JSON} related methods and wrappers.
+* Registers a callback (and optional `this` context) to run after all the Enyo and library code
+* has loaded and the `DOMContentLoaded` event (or equivalent on older browsers) has been sent.
+* 
+* If called after the system is in a ready state, runs the supplied code asynchronously at the
+* earliest opportunity.
 *
-* @module enyo/json
+* @module enyo/ready
+* @param {Function} fn - The method to execute when the DOM is ready.
+* @param {Object} [context] - The optional context (`this`) under which to execute the
+*	callback method.
 * @public
 */
-module.exports = {
-	
-	/**
-	* Wrapper for [JSON.stringify()]{@glossary JSON.stringify}. Creates a
-	* [JSON]{@glossary JSON} [string]{@glossary String} from an
-	* [object]{@glossary Object}.
-	*
-	* @see {@glossary JSON.stringify}
-	* @param {Object} value - The [object]{@glossary Object} to convert to a
-	*	[JSON]{@glossary JSON} [string]{@glossary String}.
-	* @param {(Function|String[])} [replacer] An optional parameter indicating either an
-	*	[array]{@glossary Array} of keys to include in the final output or a
-	*	[function]{@glossary Function} that will have the opportunity to dynamically return
-	*	values to include for keys.
-	* @param {(Number|String)} [space] - Determines the spacing (if any) for pretty-printed
-	*	output of the JSON string. A [number]{@glossary Number} indicates the number of
-	* spaces to use in the output, while a string will be used verbatim.
-	* @returns {String} The JSON string for the given object.
-	* @public
-	*/
-	stringify: function(value, replacer, space) {
-		return JSON.stringify(value, replacer, space);
-	},
-	
-	/**
-	* Wrapper for [JSON.parse()]{@glossary JSON.parse}. Parses a valid
-	* [JSON]{@glossary JSON} [string]{@glossary String} and returns an
-	* [object]{@glossary Object}, or `null` if the parameters are invalid.
-	*
-	* @see {@glossary JSON.parse}
-	* @param {String} json - The [JSON]{@glossary JSON} [string]{@glossary String} to
-	*	parse into an [object]{@glossary Object}.
-	* @param {Function} [reviver] - The optional [function]{@glossary Function} to use to
-	*	parse individual keys of the return object.
-	* @returns {(Object|null)} If parameters are valid, an [object]{@glossary Object}
-	* is returned; otherwise, `null`.
-	* @public
-	*/
-	parse: function(json, reviver) {
-		return json ? JSON.parse(json, reviver) : null;
+module.exports = function (fn, context) {
+	queue.push([fn, context]);
+	// schedule another queue flush if needed to run new ready calls
+	if (ready && !flushScheduled) {
+		setTimeout(flush, 0);
+		flushScheduled = true;
 	}
 };
+
+/**
+* @private
+*/
+run = function (fn, context) {
+	fn.call(context || global);
+};
+
+/**
+* @private
+*/
+init = function (event) {
+	// if we're interactive, it should be safe to move
+	// forward because the content has been parsed
+	if ((ready = ("interactive" === doc.readyState))) {
+		if ("DOMContentLoaded" !== event.type && "readystatechange" !== event.type) {
+			remove(event.type, init);
+			flush();
+		}
+	}
+	// for legacy WebKit (including webOS 3.x and less) and assurance
+	if ((ready = ("complete" === doc.readyState || "loaded" === doc.readyState))) {
+		remove(event.type, init);
+		flush();
+	}
+};
+
+/**
+* @private
+*/
+add = function (event, fn) {
+	doc.addEventListener(event, fn, false);
+};
+
+/**
+* @private
+*/
+remove = function (event, fn) {
+	doc.removeEventListener(event, fn, false);
+};
+
+/**
+* @private
+*/
+flush = function () {
+	if (ready && queue.length) {
+		while (queue.length) {
+			run.apply(global, queue.shift());
+		}
+	}
+	flushScheduled = false;
+};
+
+// ok, let's hook this up
+add("DOMContentLoaded", init);
+add("readystatechange", init);
 
 }],'enyo/utils':[function (module,exports,global,require,request){
 require('enyo');
@@ -1476,101 +1519,58 @@ exports.addToRoots = function (view) {
 	}
 };
 
-}],'enyo/ready':[function (module,exports,global,require,request){
+}],'enyo/json':[function (module,exports,global,require,request){
 require('enyo');
 
-// we need to register appropriately to know when
-// the document is officially ready, to ensure that
-// client code is only going to execute at the
-// appropriate time
-
-var doc = global.document;
-var queue = [];
-var ready = ("complete" === doc.readyState);
-var run;
-var init;
-var remove;
-var add;
-var flush;
-var flushScheduled = false;
 
 /**
-* Registers a callback (and optional `this` context) to run after all the Enyo and library code
-* has loaded and the `DOMContentLoaded` event (or equivalent on older browsers) has been sent.
-* 
-* If called after the system is in a ready state, runs the supplied code asynchronously at the
-* earliest opportunity.
+* [JSON]{@glossary JSON} related methods and wrappers.
 *
-* @module enyo/ready
-* @param {Function} fn - The method to execute when the DOM is ready.
-* @param {Object} [context] - The optional context (`this`) under which to execute the
-*	callback method.
+* @module enyo/json
 * @public
 */
-module.exports = function (fn, context) {
-	queue.push([fn, context]);
-	// schedule another queue flush if needed to run new ready calls
-	if (ready && !flushScheduled) {
-		setTimeout(flush, 0);
-		flushScheduled = true;
+module.exports = {
+	
+	/**
+	* Wrapper for [JSON.stringify()]{@glossary JSON.stringify}. Creates a
+	* [JSON]{@glossary JSON} [string]{@glossary String} from an
+	* [object]{@glossary Object}.
+	*
+	* @see {@glossary JSON.stringify}
+	* @param {Object} value - The [object]{@glossary Object} to convert to a
+	*	[JSON]{@glossary JSON} [string]{@glossary String}.
+	* @param {(Function|String[])} [replacer] An optional parameter indicating either an
+	*	[array]{@glossary Array} of keys to include in the final output or a
+	*	[function]{@glossary Function} that will have the opportunity to dynamically return
+	*	values to include for keys.
+	* @param {(Number|String)} [space] - Determines the spacing (if any) for pretty-printed
+	*	output of the JSON string. A [number]{@glossary Number} indicates the number of
+	* spaces to use in the output, while a string will be used verbatim.
+	* @returns {String} The JSON string for the given object.
+	* @public
+	*/
+	stringify: function(value, replacer, space) {
+		return JSON.stringify(value, replacer, space);
+	},
+	
+	/**
+	* Wrapper for [JSON.parse()]{@glossary JSON.parse}. Parses a valid
+	* [JSON]{@glossary JSON} [string]{@glossary String} and returns an
+	* [object]{@glossary Object}, or `null` if the parameters are invalid.
+	*
+	* @see {@glossary JSON.parse}
+	* @param {String} json - The [JSON]{@glossary JSON} [string]{@glossary String} to
+	*	parse into an [object]{@glossary Object}.
+	* @param {Function} [reviver] - The optional [function]{@glossary Function} to use to
+	*	parse individual keys of the return object.
+	* @returns {(Object|null)} If parameters are valid, an [object]{@glossary Object}
+	* is returned; otherwise, `null`.
+	* @public
+	*/
+	parse: function(json, reviver) {
+		return json ? JSON.parse(json, reviver) : null;
 	}
 };
-
-/**
-* @private
-*/
-run = function (fn, context) {
-	fn.call(context || global);
-};
-
-/**
-* @private
-*/
-init = function (event) {
-	// if we're interactive, it should be safe to move
-	// forward because the content has been parsed
-	if ((ready = ("interactive" === doc.readyState))) {
-		if ("DOMContentLoaded" !== event.type && "readystatechange" !== event.type) {
-			remove(event.type, init);
-			flush();
-		}
-	}
-	// for legacy WebKit (including webOS 3.x and less) and assurance
-	if ((ready = ("complete" === doc.readyState || "loaded" === doc.readyState))) {
-		remove(event.type, init);
-		flush();
-	}
-};
-
-/**
-* @private
-*/
-add = function (event, fn) {
-	doc.addEventListener(event, fn, false);
-};
-
-/**
-* @private
-*/
-remove = function (event, fn) {
-	doc.removeEventListener(event, fn, false);
-};
-
-/**
-* @private
-*/
-flush = function () {
-	if (ready && queue.length) {
-		while (queue.length) {
-			run.apply(global, queue.shift());
-		}
-	}
-	flushScheduled = false;
-};
-
-// ok, let's hook this up
-add("DOMContentLoaded", init);
-add("readystatechange", init);
 
 }],'enyo/platform':[function (module,exports,global,require,request){
 require('enyo');
@@ -1698,195 +1698,7 @@ for (var i = 0, p, m, v; (p = platforms[i]); i++) {
 	}
 }
 
-},{'./utils':'enyo/utils'}],'enyo/logger':[function (module,exports,global,require,request){
-require('enyo');
-
-var
-	json = require('./json'),
-	utils = require('./utils'),
-	platform = require('./platform');
-
-/**
-* These platforms only allow one argument for [console.log()]{@glossary console.log}:
-*
-* * android
-* * ios
-* * webos
-*
-* @ignore
-*/
-var dumbConsole = Boolean(platform.android || platform.ios || platform.webos);
-
-/**
-* Internally used methods and properties associated with logging.
-*
-* @module enyo/logger
-* @public
-*/
-exports = module.exports = {
-
-	/**
-	* The log level to use. Can be a value from -1 to 99, where -1 disables all
-	* logging, 0 is 'error', 10 is 'warn', and 20 is 'log'. It is preferred that
-	* this value be set using the [setLogLevel()]{@link module:enyo/logger#setLogLevel}
-	* method.
-	*
-	* @type {Number}
-	* @default 99
-	* @public
-	*/
-	level: 99,
-
-	/**
-	* The known levels.
-	*
-	* @private
-	*/
-	levels: {log: 20, warn: 10, error: 0},
-
-	/**
-	* @private
-	*/
-	shouldLog: function (fn) {
-		var ll = parseInt(this.levels[fn], 0);
-		return (ll <= this.level);
-	},
-
-	/**
-	* @private
-	*/
-	validateArgs: function (args) {
-		// gracefully handle and prevent circular reference errors in objects
-		for (var i=0, l=args.length, item; (item=args[i]) || i<l; i++) {
-			try {
-				if (typeof item === 'object') {
-					args[i] = json.stringify(item);
-				}
-			} catch (e) {
-				args[i] = 'Error: ' + e.message;
-			}
-		}
-	},
-
-	/**
-	* @private
-	*/
-	_log: function (fn, args) {
-		// avoid trying to use console on IE instances where the object hasn't been
-		// created due to the developer tools being unopened
-		var console = global.console;
-		if (typeof console === 'undefined') {
-            return;
-        }
-		//var a$ = utils.logging.formatArgs(fn, args);
-		var a$ = utils.isArray(args) ? args : utils.cloneArray(args);
-		if (platform.androidFirefox) {
-			// Firefox for Android's console does not handle objects with circular references
-			this.validateArgs(a$);
-		}
-		if (dumbConsole) {
-			// at least in early versions of webos, console.* only accept a single argument
-			a$ = [a$.join(' ')];
-		}
-		var fn$ = console[fn];
-		if (fn$ && fn$.apply) {
-			// some consoles support 'warn', 'info', and so on
-			fn$.apply(console, a$);
-		} else if (console.log.apply) {
-			// some consoles support console.log.apply
-			console.log.apply(console, a$);
-		} else {
-			// otherwise, do our own formatting
-			console.log(a$.join(' '));
-		}
-	},
-
-	/**
-	* This is exposed elsewhere.
-	*
-	* @private
-	*/
-	log: function (fn, args) {
-
-		if (fn != 'log' && fn != 'warn' && fn != 'error') {
-			args = Array.prototype.slice.call(arguments);
-			fn = 'log';
-		}
-
-		var console = global.console;
-		if (typeof console !== 'undefined') {
-			if (this.shouldLog(fn)) {
-				this._log(fn, args);
-			}
-		}
-	}
-};
-
-/**
-* Sets the log level to the given value. This will restrict the amount of output depending on
-* the settings. The higher the value, the more output that will be allowed. The default is
-* 99. The value, -1, would silence all logging, even 'error' (0).
-* Without the 'see': {@link module:enyo/logger#log}.
-*
-* @see module:enyo/logger#level
-* @see module:enyo/logger#log
-* @see module:enyo/logger#warn
-* @see module:enyo/logger#error
-* @param {Number} level - The level to set logging to.
-*/
-exports.setLogLevel = function (level) {
-	var ll = parseInt(level, 0);
-	if (isFinite(ll)) {
-		this.level = ll;
-	}
-};
-
-/**
-* A wrapper for [console.log()]{@glossary console.log}, compatible
-* across supported platforms. Will output only if the current
-* [log level]{@link module:enyo/logger#level} allows it. [Object]{@glossary Object}
-* parameters will be serialized via [JSON.stringify()]{@glossary JSON.stringify}
-* automatically.
-*
-* @utility
-* @see {@glossary console.log}
-* @param {...*} - The arguments to be logged.
-* @public
-*/
-
-/**
-* A wrapper for [console.warn()]{@glossary console.warn}, compatible
-* across supported platforms. Will output only if the current
-* [log level]{@link module:enyo/logger#level} allows it. [Object]{@glossary Object}
-* parameters will be serialized via [JSON.stringify()]{@glossary JSON.stringify}
-* automatically.
-*
-* @utility
-* @see {@glossary console.warn}
-* @param {...*} - The arguments to be logged.
-* @public
-*/
-exports.warn = function () {
-	this.log('warn', arguments);
-};
-
-/**
-* A wrapper for [console.error()]{@glossary console.error}, compatible
-* across supported platforms. Will output only if the current
-* [log level]{@link module:enyo/logger#level} allows it. [Object]{@glossary Object}
-* parameters will be serialized via [JSON.stringify()]{@glossary JSON.stringify}
-* automatically.
-*
-* @utility
-* @see {@glossary console.error}
-* @param {...*} - The arguments to be logged.
-* @public
-*/
-exports.error = function () {
-	this.log('error', arguments);
-};
-
-},{'./json':'enyo/json','./utils':'enyo/utils','./platform':'enyo/platform'}],'enyo/dom':[function (module,exports,global,require,request){
+},{'./utils':'enyo/utils'}],'enyo/dom':[function (module,exports,global,require,request){
 /**
 * Contains methods for working with DOM
 * @module enyo/dom
@@ -2617,7 +2429,557 @@ dom.transition = (platform.ios || platform.android || platform.chrome || platfor
 		? '-moz-transition'
 		: 'transition';
 
-},{'./roots':'enyo/roots','./utils':'enyo/utils','./platform':'enyo/platform'}],'enyo/kind':[function (module,exports,global,require,request){
+},{'./roots':'enyo/roots','./utils':'enyo/utils','./platform':'enyo/platform'}],'enyo/logger':[function (module,exports,global,require,request){
+require('enyo');
+
+var
+	json = require('./json'),
+	utils = require('./utils'),
+	platform = require('./platform');
+
+/**
+* These platforms only allow one argument for [console.log()]{@glossary console.log}:
+*
+* * android
+* * ios
+* * webos
+*
+* @ignore
+*/
+var dumbConsole = Boolean(platform.android || platform.ios || platform.webos);
+
+/**
+* Internally used methods and properties associated with logging.
+*
+* @module enyo/logger
+* @public
+*/
+exports = module.exports = {
+
+	/**
+	* The log level to use. Can be a value from -1 to 99, where -1 disables all
+	* logging, 0 is 'error', 10 is 'warn', and 20 is 'log'. It is preferred that
+	* this value be set using the [setLogLevel()]{@link module:enyo/logger#setLogLevel}
+	* method.
+	*
+	* @type {Number}
+	* @default 99
+	* @public
+	*/
+	level: 99,
+
+	/**
+	* The known levels.
+	*
+	* @private
+	*/
+	levels: {log: 20, warn: 10, error: 0},
+
+	/**
+	* @private
+	*/
+	shouldLog: function (fn) {
+		var ll = parseInt(this.levels[fn], 0);
+		return (ll <= this.level);
+	},
+
+	/**
+	* @private
+	*/
+	validateArgs: function (args) {
+		// gracefully handle and prevent circular reference errors in objects
+		for (var i=0, l=args.length, item; (item=args[i]) || i<l; i++) {
+			try {
+				if (typeof item === 'object') {
+					args[i] = json.stringify(item);
+				}
+			} catch (e) {
+				args[i] = 'Error: ' + e.message;
+			}
+		}
+	},
+
+	/**
+	* @private
+	*/
+	_log: function (fn, args) {
+		// avoid trying to use console on IE instances where the object hasn't been
+		// created due to the developer tools being unopened
+		var console = global.console;
+		if (typeof console === 'undefined') {
+            return;
+        }
+		//var a$ = utils.logging.formatArgs(fn, args);
+		var a$ = utils.isArray(args) ? args : utils.cloneArray(args);
+		if (platform.androidFirefox) {
+			// Firefox for Android's console does not handle objects with circular references
+			this.validateArgs(a$);
+		}
+		if (dumbConsole) {
+			// at least in early versions of webos, console.* only accept a single argument
+			a$ = [a$.join(' ')];
+		}
+		var fn$ = console[fn];
+		if (fn$ && fn$.apply) {
+			// some consoles support 'warn', 'info', and so on
+			fn$.apply(console, a$);
+		} else if (console.log.apply) {
+			// some consoles support console.log.apply
+			console.log.apply(console, a$);
+		} else {
+			// otherwise, do our own formatting
+			console.log(a$.join(' '));
+		}
+	},
+
+	/**
+	* This is exposed elsewhere.
+	*
+	* @private
+	*/
+	log: function (fn, args) {
+
+		if (fn != 'log' && fn != 'warn' && fn != 'error') {
+			args = Array.prototype.slice.call(arguments);
+			fn = 'log';
+		}
+
+		var console = global.console;
+		if (typeof console !== 'undefined') {
+			if (this.shouldLog(fn)) {
+				this._log(fn, args);
+			}
+		}
+	}
+};
+
+/**
+* Sets the log level to the given value. This will restrict the amount of output depending on
+* the settings. The higher the value, the more output that will be allowed. The default is
+* 99. The value, -1, would silence all logging, even 'error' (0).
+* Without the 'see': {@link module:enyo/logger#log}.
+*
+* @see module:enyo/logger#level
+* @see module:enyo/logger#log
+* @see module:enyo/logger#warn
+* @see module:enyo/logger#error
+* @param {Number} level - The level to set logging to.
+*/
+exports.setLogLevel = function (level) {
+	var ll = parseInt(level, 0);
+	if (isFinite(ll)) {
+		this.level = ll;
+	}
+};
+
+/**
+* A wrapper for [console.log()]{@glossary console.log}, compatible
+* across supported platforms. Will output only if the current
+* [log level]{@link module:enyo/logger#level} allows it. [Object]{@glossary Object}
+* parameters will be serialized via [JSON.stringify()]{@glossary JSON.stringify}
+* automatically.
+*
+* @utility
+* @see {@glossary console.log}
+* @param {...*} - The arguments to be logged.
+* @public
+*/
+
+/**
+* A wrapper for [console.warn()]{@glossary console.warn}, compatible
+* across supported platforms. Will output only if the current
+* [log level]{@link module:enyo/logger#level} allows it. [Object]{@glossary Object}
+* parameters will be serialized via [JSON.stringify()]{@glossary JSON.stringify}
+* automatically.
+*
+* @utility
+* @see {@glossary console.warn}
+* @param {...*} - The arguments to be logged.
+* @public
+*/
+exports.warn = function () {
+	this.log('warn', arguments);
+};
+
+/**
+* A wrapper for [console.error()]{@glossary console.error}, compatible
+* across supported platforms. Will output only if the current
+* [log level]{@link module:enyo/logger#level} allows it. [Object]{@glossary Object}
+* parameters will be serialized via [JSON.stringify()]{@glossary JSON.stringify}
+* automatically.
+*
+* @utility
+* @see {@glossary console.error}
+* @param {...*} - The arguments to be logged.
+* @public
+*/
+exports.error = function () {
+	this.log('error', arguments);
+};
+
+},{'./json':'enyo/json','./utils':'enyo/utils','./platform':'enyo/platform'}],'enyo/HTMLStringDelegate':[function (module,exports,global,require,request){
+require('enyo');
+
+var
+	Dom = require('./dom');
+
+var selfClosing = {img: 1, hr: 1, br: 1, area: 1, base: 1, basefont: 1, input: 1, link: 1,
+	meta: 1, command: 1, embed: 1, keygen: 1, wbr: 1, param: 1, source: 1, track: 1, col: 1};
+
+/**
+* This is the default render delegate used by {@link module:enyo/Control~Control}. It
+* generates the HTML [string]{@glossary String} content and correctly inserts
+* it into the DOM. A string-concatenation technique is used to perform DOM
+* insertion in batches.
+*
+* @module enyo/HTMLStringDelegate
+* @public
+*/
+module.exports = {
+	
+	/**
+	* @private
+	*/
+	invalidate: function (control, item) {
+		switch (item) {
+		case 'content':
+			this.renderContent(control);
+			break;
+		default:
+			control.tagsValid = false;
+			break;
+		}
+	},
+	
+	/**
+	* @private
+	*/
+	render: function (control) {
+		if (control.parent) {
+			control.parent.beforeChildRender(control);
+			
+			if (!control.parent.generated) return;
+			if (control.tag === null) return control.parent.render();
+		}
+		
+		if (!control.hasNode()) this.renderNode(control);
+		if (control.hasNode()) {
+			this.renderDom(control);
+			if (control.generated) control.rendered();
+		}
+	},
+	
+	/**
+	* @private
+	*/
+	renderInto: function (control, parentNode) {
+		parentNode.innerHTML = this.generateHtml(control);
+		
+		if (control.generated) control.rendered();
+	},
+	
+	/**
+	* @private
+	*/
+	renderNode: function (control) {
+		this.teardownRender(control);
+		control.node = document.createElement(control.tag);
+		control.addNodeToParent();
+		control.set('generated', true);
+	},
+	
+	/**
+	* @private
+	*/
+	renderDom: function (control) {
+		this.renderAttributes(control);
+		this.renderStyles(control);
+		this.renderContent(control);
+	},
+	
+	/**
+	* @private
+	*/
+	renderStyles: function (control) {
+		var style = control.style;
+		
+		// we can safely do this knowing it will synchronize properly without a double
+		// set in the DOM because we're flagging the internal property
+		if (control.hasNode()) {
+			control.node.style.cssText = style;
+			// retrieve the parsed value for synchronization
+			control.cssText = style = control.node.style.cssText;
+			// now we set it knowing they will be synchronized and everybody that is listening
+			// will also be updated to know about the change
+			control.set('style', style);
+		}
+	},
+	
+	/**
+	* @private
+	*/
+	renderAttributes: function (control) {
+		var attrs = control.attributes,
+			node = control.hasNode(),
+			key,
+			val;
+		
+		if (node) {
+			for (key in attrs) {
+				val = attrs[key];
+				if (val === null || val === false || val === "") {
+					node.removeAttribute(key);
+				} else {
+					node.setAttribute(key, val);
+				}
+			}
+		}
+	},
+	
+	/**
+	* @private
+	*/
+	renderContent: function (control) {
+		if (control.generated) this.teardownChildren(control);
+		if (control.hasNode()) control.node.innerHTML = this.generateInnerHtml(control);
+	},
+	
+	/**
+	* @private
+	*/
+	generateHtml: function (control) {
+		var content,
+			html;
+		
+		if (control.canGenerate === false) {
+			return '';
+		}
+		// do this first in case content generation affects outer html (styles or attributes)
+		content = this.generateInnerHtml(control);
+		// generate tag, styles, attributes
+		html = this.generateOuterHtml(control, content);
+		// NOTE: 'generated' is used to gate access to findNodeById in
+		// hasNode, because findNodeById is expensive.
+		// NOTE: we typically use 'generated' to mean 'created in DOM'
+		// but that has not actually happened at this point.
+		// We set 'generated = true' here anyway to avoid having to walk the
+		// control tree a second time (to set it later).
+		// The contract is that insertion in DOM will happen synchronously
+		// to generateHtml() and before anybody should be calling hasNode().
+		control.set('generated', true);
+		return html;
+	},
+	
+	/**
+	* @private
+	*/
+	generateOuterHtml: function (control, content) {
+		if (!control.tag) return content;
+		if (!control.tagsValid) this.prepareTags(control);
+		return control._openTag + content + control._closeTag;
+	},
+	
+	/**
+	* @private
+	*/
+	generateInnerHtml: function (control) {
+		var allowHtml = control.allowHtml,
+			content;
+		
+		// flow can alter the way that html content is rendered inside
+		// the container regardless of whether there are children.
+		control.flow();
+		if (control.children.length) return this.generateChildHtml(control);
+		else {
+			content = control.get('content');
+			return allowHtml ? content : Dom.escape(content);
+		}
+	},
+	
+	/**
+	* @private
+	*/
+	generateChildHtml: function (control) {
+		var child,
+			html = '',
+			i = 0,
+			delegate;
+		
+		for (; (child = control.children[i]); ++i) {
+			delegate = child.renderDelegate || this;
+			html += delegate.generateHtml(child);
+		}
+		
+		return html;
+	},
+	
+	/**
+	* @private
+	*/
+	prepareTags: function (control) {
+		var html = '';
+		
+		// open tag
+		html += '<' + control.tag + (control.style ? ' style="' + control.style + '"' : '');
+		html += this.attributesToHtml(control.attributes);
+		if (selfClosing[control.tag]) {
+			control._openTag = html + '/>';
+			control._closeTag = '';
+		} else {
+			control._openTag = html + '>';
+			control._closeTag = '</' + control.tag + '>';
+		}
+		
+		control.tagsValid = true;
+	},
+	
+	/**
+	* @private
+	*/
+	attributesToHtml: function(attrs) {
+		var key,
+			val,
+			html = '';
+			
+		for (key in attrs) {
+			val = attrs[key];
+			if (val != null && val !== false && val !== '') {
+				html += ' ' + key + '="' + this.escapeAttribute(val) + '"';
+			}
+		}
+		
+		return html;
+	},
+	
+	/**
+	* @private
+	*/
+	escapeAttribute: function (text) {
+		if (typeof text != 'string') return text;
+	
+		return String(text).replace(/&/g, '&amp;').replace(/\"/g, '&quot;');
+	},
+	
+	/**
+	* @private
+	*/
+	teardownRender: function (control, cache) {
+		if (control.generated) {
+			if (typeof control.beforeTeardown === 'function') {
+				control.beforeTeardown();
+			}
+			this.teardownChildren(control, cache);
+		}
+			
+		control.node = null;
+		control.set('generated', false);
+	},
+	
+	/**
+	* @private
+	*/
+	teardownChildren: function (control, cache) {
+		var child,
+			i = 0;
+
+		for (; (child = control.children[i]); ++i) {
+			child.teardownRender(cache);
+		}
+	}
+};
+
+},{'./dom':'enyo/dom'}],'enyo/gesture/util':[function (module,exports,global,require,request){
+var
+	dom = require('../dom'),
+	platform = require('../platform'),
+	utils = require('../utils');
+
+/**
+* Used internally by {@link module:enyo/gesture}
+*
+* @module enyo/gesture/util
+* @private
+*/
+module.exports = {
+
+	/**
+	* @private
+	*/
+	eventProps: ['target', 'relatedTarget', 'clientX', 'clientY', 'pageX', 'pageY',
+		'screenX', 'screenY', 'altKey', 'ctrlKey', 'metaKey', 'shiftKey',
+		'detail', 'identifier', 'dispatchTarget', 'which', 'srcEvent'],
+
+	/**
+	* Creates an {@glossary event} of type `type` and returns it.
+	* `evt` should be an event [object]{@glossary Object}.
+	*
+	* @param {String} type - The type of {@glossary event} to make.
+	* @param {(Event|Object)} evt - The event you'd like to clone or an object that looks like it.
+	* @returns {Object} The new event [object]{@glossary Object}.
+	* @public
+	*/
+	makeEvent: function(type, evt) {
+		var e = {};
+		e.type = type;
+		for (var i=0, p; (p=this.eventProps[i]); i++) {
+			e[p] = evt[p];
+		}
+		e.srcEvent = e.srcEvent || evt;
+		e.preventDefault = this.preventDefault;
+		e.disablePrevention = this.disablePrevention;
+
+		if (dom._bodyScaleFactorX !== 1 || dom._bodyScaleFactorY !== 1) {
+			// Intercept only these events, not all events, like: hold, release, tap, etc,
+			// to avoid doing the operation again.
+			if (e.type == 'move' || e.type == 'up' || e.type == 'down' || e.type == 'enter' || e.type == 'leave') {
+				e.clientX *= dom._bodyScaleFactorX;
+				e.clientY *= dom._bodyScaleFactorY;
+			}
+		}
+		//
+		// normalize event.which and event.pageX/event.pageY
+		// Note that while 'which' works in IE9, it is broken for mousemove. Therefore,
+		// in IE, use global.event.button
+		if (platform.ie < 10) {
+			var b = global.event && global.event.button;
+			if (b) {
+				// multi-button not supported, priority: left, right, middle
+				// (note: IE bitmask is 1=left, 2=right, 4=center);
+				e.which = b & 1 ? 1 : (b & 2 ? 2 : (b & 4 ? 3 : 0));
+			}
+		} else if (platform.webos || global.PalmSystem) {
+			// Temporary fix for owos: it does not currently supply 'which' on move events
+			// and the user agent string doesn't identify itself so we test for PalmSystem
+			if (e.which === 0) {
+				e.which = 1;
+			}
+		}
+		return e;
+	},
+
+	/**
+	* Installed on [events]{@glossary event} and called in event context.
+	*
+	* @private
+	*/
+	preventDefault: function() {
+		if (this.srcEvent) {
+			this.srcEvent.preventDefault();
+		}
+	},
+
+	/**
+	* @private
+	*/
+	disablePrevention: function() {
+		this.preventDefault = utils.nop;
+		if (this.srcEvent) {
+			this.srcEvent.preventDefault = utils.nop;
+		}
+	}
+};
+
+},{'../dom':'enyo/dom','../platform':'enyo/platform','../utils':'enyo/utils'}],'enyo/kind':[function (module,exports,global,require,request){
 require('enyo');
 
 var
@@ -3125,369 +3487,306 @@ exports.createFromKind = function (nom, param) {
 	}
 };
 
-},{'./logger':'enyo/logger','./utils':'enyo/utils'}],'enyo/HTMLStringDelegate':[function (module,exports,global,require,request){
+},{'./logger':'enyo/logger','./utils':'enyo/utils'}],'enyo/Control/floatingLayer':[function (module,exports,global,require,request){
+/**
+* Exports the {@link module:enyo/Control/floatingLayer~FloatingLayer} singleton instance.
+* @module enyo/Control/floatingLayer
+*/
+
+var
+	kind = require('../kind'),
+	platform = require('../platform');
+
+module.exports = function (Control) {
+	/**
+	* {@link module:enyo/Control/floatingLayer~FloatingLayer} is a
+	* [control]{@link module:enyo/Control~Control} that provides a layer for controls that should be
+	* displayed above an [application]{@link module:enyo/Application~Application}. The `floatingLayer`
+	* singleton can be set as a control's parent to have the control float above the application, e.g.:
+	*
+	* ```
+	* var floatingLayer = require('enyo/floatingLayer');
+	* ...
+	* create: kind.inherit(function (sup) {
+	*	return function() {
+	*		sup.apply(this, arguments);
+	*		this.setParent(floatingLayer);
+	*	}
+	* });
+	* ```
+	*
+	* Note: `FloatingLayer` is not meant to be instantiated by users.
+	*
+	* @class FloatingLayer
+	* @extends module:enyo/Control~Control
+	* @ui
+	* @protected
+	*/
+	var FloatingLayer = kind(
+		/** @lends module:enyo/Control/floatingLayer~FloatingLayer.prototype */ {
+
+		/**
+		* @private
+		*/
+		kind: Control,
+
+		/**
+		* @private
+		*/
+		classes: 'enyo-fit enyo-clip enyo-untouchable',
+
+		/**
+		* @private
+		*/
+		accessibilityPreventScroll: true,
+
+		/**
+		* @method
+		* @private
+		*/
+		create: kind.inherit(function (sup) {
+			return function() {
+				sup.apply(this, arguments);
+				this.setParent(null);
+
+				if (platform.ie < 11) {
+					this.removeClass('enyo-fit');
+				}
+			};
+		}),
+
+		/**
+		* Detects when [node]{@glossary Node} is detatched due to `document.body` being stomped.
+		*
+		* @method
+		* @private
+		*/
+		hasNode: kind.inherit(function (sup) {
+			return function() {
+				sup.apply(this, arguments);
+				if (this.node && !this.node.parentNode) {
+					this.teardownRender();
+				}
+				return this.node;
+			};
+		}),
+
+		/**
+		* @method
+		* @private
+		*/
+		render: kind.inherit(function (sup) {
+			return function() {
+				this.parentNode = document.body;
+				return sup.apply(this, arguments);
+			};
+		}),
+
+		/**
+		* @private
+		*/
+		generateInnerHtml: function () {
+			return '';
+		},
+
+		/**
+		* @private
+		*/
+		beforeChildRender: function () {
+			if (!this.hasNode()) {
+				this.render();
+			}
+		},
+
+		/**
+		* @private
+		*/
+		teardownChildren: function () {
+		}
+	});
+
+	return FloatingLayer;
+};
+},{'../kind':'enyo/kind','../platform':'enyo/platform'}],'enyo/Layout':[function (module,exports,global,require,request){
+require('enyo');
+
+/**
+* Contains the declaration for the {@link module:enyo/Layout~Layout} kind.
+* @module enyo/Layout
+*/
+
+var
+	kind = require('./kind');
+
+/**
+* {@link module:enyo/Layout~Layout} is the base [kind]{@glossary kind} for layout
+* kinds. Layout kinds are used by {@link module:enyo/UiComponent~UiComponent}-based
+* [controls]{@link module:enyo/Control~Control} to allow for arranging of child controls by
+* setting the [layoutKind]{@link module:enyo/UiComponent~UiComponent#layoutKind} property.
+* 
+* Derived kinds will usually provide their own
+* [layoutClass]{@link module:enyo/Layout~Layout#layoutClass} property to affect the CSS
+* rules used, and may also implement the [flow()]{@link module:enyo/Layout~Layout#flow}
+* and [reflow()]{@link module:enyo/Layout~Layout#reflow} methods. `flow()` is called
+* during control rendering, while `reflow()` is called when the associated
+* control is resized.
+*
+* @class Layout
+* @public
+*/
+module.exports = kind(
+	/** @lends module:enyo/Layout~Layout.prototype */ {
+
+	name: 'enyo.Layout',
+
+	/**
+	* @private
+	*/
+	kind: null,
+
+	/** 
+	* CSS class that's added to the [control]{@link module:enyo/Control~Control} using this 
+	* [layout]{@link module:enyo/Layout~Layout} [kind]{@glossary kind}.
+	*
+	* @type {String}
+	* @default ''
+	* @public
+	*/
+	layoutClass: '',
+	
+	/**
+	* @private
+	*/
+	constructor: function (container) {
+		this.container = container;
+		if (container) {
+			container.addClass(this.layoutClass);
+		}
+	},
+
+	/**
+	* @private
+	*/
+	destroy: function () {
+		if (this.container) {
+			this.container.removeClass(this.layoutClass);
+		}
+	},
+	
+	/**
+	* Called during static property layout (i.e., during rendering).
+	*
+	* @public
+	*/
+	flow: function () {
+	},
+
+	/** 
+	* Called during dynamic measuring layout (i.e., during a resize).
+	*
+	* May short-circuit and return `true` if the layout needs to be
+	* redone when the associated Control is next shown. This is useful
+	* for cases where the Control itself has `showing` set to `true`
+	* but an ancestor is hidden, and the layout is therefore unable to
+	* get accurate measurements of the Control or its children.
+	*
+	* @public
+	*/
+	reflow: function () {
+	}
+});
+
+},{'./kind':'enyo/kind'}],'enyo/ApplicationSupport':[function (module,exports,global,require,request){
+/**
+* Exports the {@link module:enyo/ApplicationSupport~ApplicationSupport} mixin.
+* @module enyo/ApplicationSupport
+*/
+
+require('enyo');
+
+var kind = require('./kind');
+
+/**
+* An internally-used support {@glossary mixin} that is applied to all
+* [components]{@link module:enyo/Component~Component} of an {@link module:enyo/Application~Application} instance
+* (and to their components, recursively). This mixin adds an `app` property to
+* each component -- a local reference to the `Application` instance that
+* the component belongs to.
+* 
+* @mixin
+* @protected
+*/
+var ApplicationSupport = {
+
+	/**
+	* @private
+	*/
+	name: 'ApplicationSupport',
+
+	/**
+	* @private
+	*/
+	adjustComponentProps: kind.inherit(function (sup) {
+		return function (props) {
+			props.app = props.app || this.app;
+			sup.apply(this, arguments);
+		};
+	}),
+
+	/**
+	* @private
+	*/
+	destroy: kind.inherit(function (sup) {
+		return function () {
+			// release the reference to the application
+			this.app = null;
+			sup.apply(this, arguments);
+		};
+	})
+
+};
+
+module.exports = ApplicationSupport;
+
+},{'./kind':'enyo/kind'}],'enyo/ComponentBindingSupport':[function (module,exports,global,require,request){
+/**
+* Exports the {@link module:enyo/ComponentBindingSupport~ComponentBindingSupport} mixin.
+* @module enyo/ComponentBindingSupport
+*/
+
 require('enyo');
 
 var
-	Dom = require('./dom');
-
-var selfClosing = {img: 1, hr: 1, br: 1, area: 1, base: 1, basefont: 1, input: 1, link: 1,
-	meta: 1, command: 1, embed: 1, keygen: 1, wbr: 1, param: 1, source: 1, track: 1, col: 1};
+	kind = require('./kind');
 
 /**
-* This is the default render delegate used by {@link module:enyo/Control~Control}. It
-* generates the HTML [string]{@glossary String} content and correctly inserts
-* it into the DOM. A string-concatenation technique is used to perform DOM
-* insertion in batches.
+* An internally-used {@glossary mixin} applied to {@link module:enyo/Component~Component}
+* instances to better support [bindings]{@link module:enyo/Binding~Binding}.
 *
-* @module enyo/HTMLStringDelegate
-* @public
+* @mixin
+* @protected
 */
-module.exports = {
+var ComponentBindingSupport = {
 	
 	/**
 	* @private
 	*/
-	invalidate: function (control, item) {
-		switch (item) {
-		case 'content':
-			this.renderContent(control);
-			break;
-		default:
-			control.tagsValid = false;
-			break;
-		}
-	},
+	name: 'ComponentBindingSupport',
 	
 	/**
 	* @private
 	*/
-	render: function (control) {
-		if (control.parent) {
-			control.parent.beforeChildRender(control);
-			
-			if (!control.parent.generated) return;
-			if (control.tag === null) return control.parent.render();
-		}
-		
-		if (!control.hasNode()) this.renderNode(control);
-		if (control.hasNode()) {
-			this.renderDom(control);
-			if (control.generated) control.rendered();
-		}
-	},
-	
-	/**
-	* @private
-	*/
-	renderInto: function (control, parentNode) {
-		parentNode.innerHTML = this.generateHtml(control);
-		
-		if (control.generated) control.rendered();
-	},
-	
-	/**
-	* @private
-	*/
-	renderNode: function (control) {
-		this.teardownRender(control);
-		control.node = document.createElement(control.tag);
-		control.addNodeToParent();
-		control.set('generated', true);
-	},
-	
-	/**
-	* @private
-	*/
-	renderDom: function (control) {
-		this.renderAttributes(control);
-		this.renderStyles(control);
-		this.renderContent(control);
-	},
-	
-	/**
-	* @private
-	*/
-	renderStyles: function (control) {
-		var style = control.style;
-		
-		// we can safely do this knowing it will synchronize properly without a double
-		// set in the DOM because we're flagging the internal property
-		if (control.hasNode()) {
-			control.node.style.cssText = style;
-			// retrieve the parsed value for synchronization
-			control.cssText = style = control.node.style.cssText;
-			// now we set it knowing they will be synchronized and everybody that is listening
-			// will also be updated to know about the change
-			control.set('style', style);
-		}
-	},
-	
-	/**
-	* @private
-	*/
-	renderAttributes: function (control) {
-		var attrs = control.attributes,
-			node = control.hasNode(),
-			key,
-			val;
-		
-		if (node) {
-			for (key in attrs) {
-				val = attrs[key];
-				if (val === null || val === false || val === "") {
-					node.removeAttribute(key);
-				} else {
-					node.setAttribute(key, val);
-				}
-			}
-		}
-	},
-	
-	/**
-	* @private
-	*/
-	renderContent: function (control) {
-		if (control.generated) this.teardownChildren(control);
-		if (control.hasNode()) control.node.innerHTML = this.generateInnerHtml(control);
-	},
-	
-	/**
-	* @private
-	*/
-	generateHtml: function (control) {
-		var content,
-			html;
-		
-		if (control.canGenerate === false) {
-			return '';
-		}
-		// do this first in case content generation affects outer html (styles or attributes)
-		content = this.generateInnerHtml(control);
-		// generate tag, styles, attributes
-		html = this.generateOuterHtml(control, content);
-		// NOTE: 'generated' is used to gate access to findNodeById in
-		// hasNode, because findNodeById is expensive.
-		// NOTE: we typically use 'generated' to mean 'created in DOM'
-		// but that has not actually happened at this point.
-		// We set 'generated = true' here anyway to avoid having to walk the
-		// control tree a second time (to set it later).
-		// The contract is that insertion in DOM will happen synchronously
-		// to generateHtml() and before anybody should be calling hasNode().
-		control.set('generated', true);
-		return html;
-	},
-	
-	/**
-	* @private
-	*/
-	generateOuterHtml: function (control, content) {
-		if (!control.tag) return content;
-		if (!control.tagsValid) this.prepareTags(control);
-		return control._openTag + content + control._closeTag;
-	},
-	
-	/**
-	* @private
-	*/
-	generateInnerHtml: function (control) {
-		var allowHtml = control.allowHtml,
-			content;
-		
-		// flow can alter the way that html content is rendered inside
-		// the container regardless of whether there are children.
-		control.flow();
-		if (control.children.length) return this.generateChildHtml(control);
-		else {
-			content = control.get('content');
-			return allowHtml ? content : Dom.escape(content);
-		}
-	},
-	
-	/**
-	* @private
-	*/
-	generateChildHtml: function (control) {
-		var child,
-			html = '',
-			i = 0,
-			delegate;
-		
-		for (; (child = control.children[i]); ++i) {
-			delegate = child.renderDelegate || this;
-			html += delegate.generateHtml(child);
-		}
-		
-		return html;
-	},
-	
-	/**
-	* @private
-	*/
-	prepareTags: function (control) {
-		var html = '';
-		
-		// open tag
-		html += '<' + control.tag + (control.style ? ' style="' + control.style + '"' : '');
-		html += this.attributesToHtml(control.attributes);
-		if (selfClosing[control.tag]) {
-			control._openTag = html + '/>';
-			control._closeTag = '';
-		} else {
-			control._openTag = html + '>';
-			control._closeTag = '</' + control.tag + '>';
-		}
-		
-		control.tagsValid = true;
-	},
-	
-	/**
-	* @private
-	*/
-	attributesToHtml: function(attrs) {
-		var key,
-			val,
-			html = '';
-			
-		for (key in attrs) {
-			val = attrs[key];
-			if (val != null && val !== false && val !== '') {
-				html += ' ' + key + '="' + this.escapeAttribute(val) + '"';
-			}
-		}
-		
-		return html;
-	},
-	
-	/**
-	* @private
-	*/
-	escapeAttribute: function (text) {
-		if (typeof text != 'string') return text;
-	
-		return String(text).replace(/&/g, '&amp;').replace(/\"/g, '&quot;');
-	},
-	
-	/**
-	* @private
-	*/
-	teardownRender: function (control, cache) {
-		if (control.generated) {
-			if (typeof control.beforeTeardown === 'function') {
-				control.beforeTeardown();
-			}
-			this.teardownChildren(control, cache);
-		}
-			
-		control.node = null;
-		control.set('generated', false);
-	},
-	
-	/**
-	* @private
-	*/
-	teardownChildren: function (control, cache) {
-		var child,
-			i = 0;
-
-		for (; (child = control.children[i]); ++i) {
-			child.teardownRender(cache);
-		}
-	}
+	adjustComponentProps: kind.inherit(function (sup) {
+		return function (props) {
+			sup.apply(this, arguments);
+			props.bindingTransformOwner || (props.bindingTransformOwner = this.getInstanceOwner());
+		};
+	})
 };
 
-},{'./dom':'enyo/dom'}],'enyo/gesture/util':[function (module,exports,global,require,request){
-var
-	dom = require('../dom'),
-	platform = require('../platform'),
-	utils = require('../utils');
+module.exports = ComponentBindingSupport;
 
-/**
-* Used internally by {@link module:enyo/gesture}
-*
-* @module enyo/gesture/util
-* @private
-*/
-module.exports = {
-
-	/**
-	* @private
-	*/
-	eventProps: ['target', 'relatedTarget', 'clientX', 'clientY', 'pageX', 'pageY',
-		'screenX', 'screenY', 'altKey', 'ctrlKey', 'metaKey', 'shiftKey',
-		'detail', 'identifier', 'dispatchTarget', 'which', 'srcEvent'],
-
-	/**
-	* Creates an {@glossary event} of type `type` and returns it.
-	* `evt` should be an event [object]{@glossary Object}.
-	*
-	* @param {String} type - The type of {@glossary event} to make.
-	* @param {(Event|Object)} evt - The event you'd like to clone or an object that looks like it.
-	* @returns {Object} The new event [object]{@glossary Object}.
-	* @public
-	*/
-	makeEvent: function(type, evt) {
-		var e = {};
-		e.type = type;
-		for (var i=0, p; (p=this.eventProps[i]); i++) {
-			e[p] = evt[p];
-		}
-		e.srcEvent = e.srcEvent || evt;
-		e.preventDefault = this.preventDefault;
-		e.disablePrevention = this.disablePrevention;
-
-		if (dom._bodyScaleFactorX !== 1 || dom._bodyScaleFactorY !== 1) {
-			// Intercept only these events, not all events, like: hold, release, tap, etc,
-			// to avoid doing the operation again.
-			if (e.type == 'move' || e.type == 'up' || e.type == 'down' || e.type == 'enter' || e.type == 'leave') {
-				e.clientX *= dom._bodyScaleFactorX;
-				e.clientY *= dom._bodyScaleFactorY;
-			}
-		}
-		//
-		// normalize event.which and event.pageX/event.pageY
-		// Note that while 'which' works in IE9, it is broken for mousemove. Therefore,
-		// in IE, use global.event.button
-		if (platform.ie < 10) {
-			var b = global.event && global.event.button;
-			if (b) {
-				// multi-button not supported, priority: left, right, middle
-				// (note: IE bitmask is 1=left, 2=right, 4=center);
-				e.which = b & 1 ? 1 : (b & 2 ? 2 : (b & 4 ? 3 : 0));
-			}
-		} else if (platform.webos || global.PalmSystem) {
-			// Temporary fix for owos: it does not currently supply 'which' on move events
-			// and the user agent string doesn't identify itself so we test for PalmSystem
-			if (e.which === 0) {
-				e.which = 1;
-			}
-		}
-		return e;
-	},
-
-	/**
-	* Installed on [events]{@glossary event} and called in event context.
-	*
-	* @private
-	*/
-	preventDefault: function() {
-		if (this.srcEvent) {
-			this.srcEvent.preventDefault();
-		}
-	},
-
-	/**
-	* @private
-	*/
-	disablePrevention: function() {
-		this.preventDefault = utils.nop;
-		if (this.srcEvent) {
-			this.srcEvent.preventDefault = utils.nop;
-		}
-	}
-};
-
-},{'../dom':'enyo/dom','../platform':'enyo/platform','../utils':'enyo/utils'}],'enyo/MixinSupport':[function (module,exports,global,require,request){
+},{'./kind':'enyo/kind'}],'enyo/MixinSupport':[function (module,exports,global,require,request){
 /**
 * Exports the {@link module:enyo/MixinSupport~MixinSupport} mixin.
 * @module enyo/MixinSupport
@@ -3608,79 +3907,249 @@ var MixinSupport = {
 
 module.exports = MixinSupport;
 
-},{'./utils':'enyo/utils','./kind':'enyo/kind','./logger':'enyo/logger'}],'enyo/LinkedListNode':[function (module,exports,global,require,request){
-require('enyo');
-
+},{'./utils':'enyo/utils','./kind':'enyo/kind','./logger':'enyo/logger'}],'enyo/ComputedSupport':[function (module,exports,global,require,request){
 /**
-* Contains the declaration for the {@link module:enyo/LinkedListNode~LinkedListNode} kind.
-* @module enyo/LinkedListNode
+* Exports the {@link module:enyo/ComputedSupport~ComputedSupport} mixin.
+* @module enyo/ComputedSupport
 */
+
+require('enyo');
 
 var
 	kind = require('./kind'),
 	utils = require('./utils');
 
+var extend = kind.statics.extend;
+	
+kind.concatenated.push('computed');
+
+function getComputedValue (obj, path) {
+	var cache = obj._getComputedCache(path)
+		, isCached = obj._isComputedCached(path);
+	
+	// in the end, for efficiency and completeness in other situations
+	// it is better to know the returned value of all computed properties
+	// but in cases where they are set as cached we will sometimes use
+	// that value
+	if (cache.dirty || cache.dirty === undefined) {
+		isCached && (cache.dirty = false);
+		cache.previous = cache.value;
+		cache.value = obj[path]();
+	}
+	
+	return cache.value;
+}
+
+function queueComputed (obj, path) {
+	var queue = obj._computedQueue || (obj._computedQueue = [])
+		, deps = obj._computedDependencies[path];
+		
+	if (deps) {
+		for (var i=0, dep; (dep=deps[i]); ++i) {
+			if (!queue.length || -1 == queue.indexOf(dep)) queue.push(dep);
+		}
+	}
+}
+
+function flushComputed (obj) {
+	var queue = obj._computedQueue;
+	obj._computedQueue = null;
+	if (queue && obj.isObserving()) {
+		for (var i=0, ln; (ln=queue[i]); ++i) {
+			obj.notify(ln, obj._getComputedCache(ln).value, getComputedValue(obj, ln));
+		}
+	}
+}
+
 /**
-* An abstract linked-list node.
+* A {@glossary mixin} that adds API methods to support
+* [computed properties]{@glossary computed_property}. Unlike other support mixins,
+* this mixin does not need to be explicitly included by a [kind]{@glossary kind}. If the
+* `computed` [array]{@glossary Array} is found in a kind definition, this mixin will
+* automatically be included.
 *
-* @class LinkedListNode
+* @mixin
+* @public
+*/
+var ComputedSupport = {
+	/**
+	* @private
+	*/
+	name: 'ComputedSuport',
+	
+	/**
+	* @private
+	*/
+	_computedRecursion: 0,
+	
+	/**
+	* Primarily intended for internal use, this method determines whether the
+	* given path is a known [computed property]{@glossary computed_property}.
+	*
+	* @param {String} path - The property or path to test.
+	* @returns {Boolean} Whether or not the `path` is a
+	*	[computed property]{@glossary computed_property}.
+	* @public
+	*/
+	isComputed: function (path) {
+		// if it exists it will be explicitly one of these cases and it is cheaper than hasOwnProperty
+		return this._computed && (this._computed[path] === true || this._computed[path] === false);
+	},
+	
+	/**
+	* Primarily intended for internal use, this method determines whether the
+	* given path is a known dependency of a
+	* [computed property]{@glossary computed_property}.
+	*
+	* @param {String} path - The property or path to test.
+	* @returns {Boolean} Whether or not the `path` is a dependency of a
+	*	[computed property]{@glossary computed_property}.
+	* @public
+	*/
+	isComputedDependency: function (path) {
+		return !! (this._computedDependencies? this._computedDependencies[path]: false);
+	},
+	
+	/**
+	* @private
+	*/
+	get: kind.inherit(function (sup) {
+		return function (path) {
+			return this.isComputed(path)? getComputedValue(this, path): sup.apply(this, arguments);
+		};
+	}),
+	
+	/**
+	* @private
+	*/
+	set: kind.inherit(function (sup) {
+		return function (path) {
+			// we do not accept parameters for computed properties
+			return this.isComputed(path)? this: sup.apply(this, arguments);
+		};
+	}),
+	
+	/**
+	* @private
+	*/
+	notifyObservers: function () {
+		return this.notify.apply(this, arguments);
+	},
+	
+	/**
+	* @private
+	*/
+	notify: kind.inherit(function (sup) {
+		return function (path, was, is) {
+			this.isComputedDependency(path) && queueComputed(this, path);
+			this._computedRecursion++;
+			sup.apply(this, arguments);
+			this._computedRecursion--;
+			this._computedQueue && this._computedRecursion === 0 && flushComputed(this);
+			return this;
+		};
+	}),
+	
+	/**
+	* @private
+	*/
+	_isComputedCached: function (path) {
+		return this._computed[path];
+	},
+	
+	/**
+	* @private
+	*/
+	_getComputedCache: function (path) {
+		var cache = this._computedCache || (this._computedCache = {});
+		return cache[path] || (cache[path] = {});
+	}
+};
+
+module.exports = ComputedSupport;
+
+/*
+* Hijack the original so we can add additional default behavior.
+*/
+var sup = kind.concatHandler;
+
+// @NOTE: It seems like a lot of work but it really won't happen that much and the more
+// we push to kind-time the better for initialization time
+
+/**
 * @private
 */
-module.exports = kind(
-	/** @lends module:enyo/LinkedListNode~LinkedListNode.prototype */ {
-	
-	/**
-	* @private
-	*/
-	kind: null,
-	
-	/**
-	* @private
-	*/
+kind.concatHandler = function (ctor, props, instance) {
 
-	
-	/**
-	* @private
-	*/
-	prev: null,
-	
-	/**
-	* @private
-	*/
-	next: null,
-	
-	/**
-	* @private
-	*/
-	copy: function () {
-		var cpy = new this.ctor();
-		cpy.prev = this.prev;
-		cpy.next = this.next;
-		return cpy;
-	},
-	
-	/**
-	* @private
-	*/
-	constructor: function (props) {
-		props && utils.mixin(this, props);
-	},
-	
-	/**
-	* @private
-	*/
-	destroy: function () {
-		// clear reference to previous node
-		this.prev = null;
+	sup.call(this, ctor, props, instance);
+
+	// only matters if there are computed properties to manage
+	if (props.computed) {
 		
-		// if we have a reference to our next node
-		// we continue down the chain
-		this.next && this.next.destroy();
+		var proto = ctor.prototype || ctor
+			, computed = proto._computed? Object.create(proto._computed): {}
+			, dependencies = proto._computedDependencies? Object.create(proto._computedDependencies): {};
 		
-		// clear our reference to the next node
-		this.next = null;
+		// if it hasn't already been applied we need to ensure that the prototype will
+		// actually have the computed support mixin present, it will not apply it more
+		// than once to the prototype
+		extend(ComputedSupport, proto);
+	
+		// @NOTE: This is the handling of the original syntax provided for computed properties in 2.3.ish...
+		// All we do here is convert it to a structure that can be used for the other scenario and preferred
+		// computed declarations format
+		if (!props.computed || !(props.computed instanceof Array)) {
+			(function () {
+				var tmp = [], deps, name, conf;
+				// here is the slow iteration over the properties...
+				for (name in props.computed) {
+					// points to the dependencies of the computed method
+					deps = props.computed[name];
+					/*jshint -W083 */
+					conf = deps && deps.find(function (ln) {
+						// we deliberately remove the entry here and forcibly return true to break
+						return typeof ln == 'object'? (utils.remove(deps, ln) || true): false;
+					});
+					/*jshint +W083 */
+					// create a single entry now for the method/computed with all dependencies
+					tmp.push({method: name, path: deps, cached: conf? conf.cached: null});
+				}
+				
+				// note that we only do this one so even for a mixin that is evaluated several
+				// times this would only happen once
+				props.computed = tmp;
+			}());
+		}
+		
+		var addDependency = function (path, dep) {
+			// its really an inverse look at the original
+			var deps;
+			
+			if (dependencies[path] && !dependencies.hasOwnProperty(path)) dependencies[path] = dependencies[path].slice();
+			deps = dependencies[path] || (dependencies[path] = []);
+			deps.push(dep);
+		};
+		
+		// now we handle the new computed properties the way we intended to
+		for (var i=0, ln; (ln=props.computed[i]); ++i) {
+			// if the entry already exists we are merely updating whether or not it is
+			// now cached
+			computed[ln.method] = !! ln.cached;
+			// we must now look to add an entry for any given dependencies and map them
+			// back to the computed property they will trigger
+			/*jshint -W083 */
+			if (ln.path && ln.path instanceof Array) ln.path.forEach(function (dep) { addDependency(dep, ln.method); });
+			/*jshint +W083 */
+			else if (ln.path) addDependency(ln.path, ln.method);
+		}
+		
+		// arg, free the key from the properties so it won't be applied later...
+		// delete props.computed;
+		// make sure to reassign the correct items to the prototype
+		proto._computed = computed;
+		proto._computedDependencies = dependencies;
 	}
-});
+};
 
 },{'./kind':'enyo/kind','./utils':'enyo/utils'}],'enyo/Binding':[function (module,exports,global,require,request){
 require('enyo');
@@ -4376,10 +4845,84 @@ exports.defaultBindingKind = exports;
 */
 exports.PassiveBinding = PassiveBinding;
 
-},{'./kind':'enyo/kind','./utils':'enyo/utils'}],'enyo/ComputedSupport':[function (module,exports,global,require,request){
+},{'./kind':'enyo/kind','./utils':'enyo/utils'}],'enyo/LinkedListNode':[function (module,exports,global,require,request){
+require('enyo');
+
 /**
-* Exports the {@link module:enyo/ComputedSupport~ComputedSupport} mixin.
-* @module enyo/ComputedSupport
+* Contains the declaration for the {@link module:enyo/LinkedListNode~LinkedListNode} kind.
+* @module enyo/LinkedListNode
+*/
+
+var
+	kind = require('./kind'),
+	utils = require('./utils');
+
+/**
+* An abstract linked-list node.
+*
+* @class LinkedListNode
+* @private
+*/
+module.exports = kind(
+	/** @lends module:enyo/LinkedListNode~LinkedListNode.prototype */ {
+	
+	/**
+	* @private
+	*/
+	kind: null,
+	
+	/**
+	* @private
+	*/
+
+	
+	/**
+	* @private
+	*/
+	prev: null,
+	
+	/**
+	* @private
+	*/
+	next: null,
+	
+	/**
+	* @private
+	*/
+	copy: function () {
+		var cpy = new this.ctor();
+		cpy.prev = this.prev;
+		cpy.next = this.next;
+		return cpy;
+	},
+	
+	/**
+	* @private
+	*/
+	constructor: function (props) {
+		props && utils.mixin(this, props);
+	},
+	
+	/**
+	* @private
+	*/
+	destroy: function () {
+		// clear reference to previous node
+		this.prev = null;
+		
+		// if we have a reference to our next node
+		// we continue down the chain
+		this.next && this.next.destroy();
+		
+		// clear our reference to the next node
+		this.next = null;
+	}
+});
+
+},{'./kind':'enyo/kind','./utils':'enyo/utils'}],'enyo/BindingSupport':[function (module,exports,global,require,request){
+/**
+* Exports the {@link module:enyo/BindingSupport~BindingSupport} mixin
+* @module enyo/BindingSupport
 */
 
 require('enyo');
@@ -4388,538 +4931,179 @@ var
 	kind = require('./kind'),
 	utils = require('./utils');
 
-var extend = kind.statics.extend;
-	
-kind.concatenated.push('computed');
+var
+	Binding = require('./Binding');
 
-function getComputedValue (obj, path) {
-	var cache = obj._getComputedCache(path)
-		, isCached = obj._isComputedCached(path);
-	
-	// in the end, for efficiency and completeness in other situations
-	// it is better to know the returned value of all computed properties
-	// but in cases where they are set as cached we will sometimes use
-	// that value
-	if (cache.dirty || cache.dirty === undefined) {
-		isCached && (cache.dirty = false);
-		cache.previous = cache.value;
-		cache.value = obj[path]();
-	}
-	
-	return cache.value;
-}
-
-function queueComputed (obj, path) {
-	var queue = obj._computedQueue || (obj._computedQueue = [])
-		, deps = obj._computedDependencies[path];
-		
-	if (deps) {
-		for (var i=0, dep; (dep=deps[i]); ++i) {
-			if (!queue.length || -1 == queue.indexOf(dep)) queue.push(dep);
-		}
-	}
-}
-
-function flushComputed (obj) {
-	var queue = obj._computedQueue;
-	obj._computedQueue = null;
-	if (queue && obj.isObserving()) {
-		for (var i=0, ln; (ln=queue[i]); ++i) {
-			obj.notify(ln, obj._getComputedCache(ln).value, getComputedValue(obj, ln));
-		}
-	}
-}
+kind.concatenated.push('bindings');
 
 /**
-* A {@glossary mixin} that adds API methods to support
-* [computed properties]{@glossary computed_property}. Unlike other support mixins,
-* this mixin does not need to be explicitly included by a [kind]{@glossary kind}. If the
-* `computed` [array]{@glossary Array} is found in a kind definition, this mixin will
-* automatically be included.
+* An internally-used {@glossary mixin} that is added to {@link module:enyo/CoreObject~Object}
+* and its [subkinds]{@glossary subkind}. It includes public and protected API
+* methods for working with [bindings]{@link module:enyo/Binding~Binding}.
 *
-* @mixin
-* @public
-*/
-var ComputedSupport = {
-	/**
-	* @private
-	*/
-	name: 'ComputedSuport',
-	
-	/**
-	* @private
-	*/
-	_computedRecursion: 0,
-	
-	/**
-	* Primarily intended for internal use, this method determines whether the
-	* given path is a known [computed property]{@glossary computed_property}.
-	*
-	* @param {String} path - The property or path to test.
-	* @returns {Boolean} Whether or not the `path` is a
-	*	[computed property]{@glossary computed_property}.
-	* @public
-	*/
-	isComputed: function (path) {
-		// if it exists it will be explicitly one of these cases and it is cheaper than hasOwnProperty
-		return this._computed && (this._computed[path] === true || this._computed[path] === false);
-	},
-	
-	/**
-	* Primarily intended for internal use, this method determines whether the
-	* given path is a known dependency of a
-	* [computed property]{@glossary computed_property}.
-	*
-	* @param {String} path - The property or path to test.
-	* @returns {Boolean} Whether or not the `path` is a dependency of a
-	*	[computed property]{@glossary computed_property}.
-	* @public
-	*/
-	isComputedDependency: function (path) {
-		return !! (this._computedDependencies? this._computedDependencies[path]: false);
-	},
-	
-	/**
-	* @private
-	*/
-	get: kind.inherit(function (sup) {
-		return function (path) {
-			return this.isComputed(path)? getComputedValue(this, path): sup.apply(this, arguments);
-		};
-	}),
-	
-	/**
-	* @private
-	*/
-	set: kind.inherit(function (sup) {
-		return function (path) {
-			// we do not accept parameters for computed properties
-			return this.isComputed(path)? this: sup.apply(this, arguments);
-		};
-	}),
-	
-	/**
-	* @private
-	*/
-	notifyObservers: function () {
-		return this.notify.apply(this, arguments);
-	},
-	
-	/**
-	* @private
-	*/
-	notify: kind.inherit(function (sup) {
-		return function (path, was, is) {
-			this.isComputedDependency(path) && queueComputed(this, path);
-			this._computedRecursion++;
-			sup.apply(this, arguments);
-			this._computedRecursion--;
-			this._computedQueue && this._computedRecursion === 0 && flushComputed(this);
-			return this;
-		};
-	}),
-	
-	/**
-	* @private
-	*/
-	_isComputedCached: function (path) {
-		return this._computed[path];
-	},
-	
-	/**
-	* @private
-	*/
-	_getComputedCache: function (path) {
-		var cache = this._computedCache || (this._computedCache = {});
-		return cache[path] || (cache[path] = {});
-	}
-};
-
-module.exports = ComputedSupport;
-
-/*
-* Hijack the original so we can add additional default behavior.
-*/
-var sup = kind.concatHandler;
-
-// @NOTE: It seems like a lot of work but it really won't happen that much and the more
-// we push to kind-time the better for initialization time
-
-/**
-* @private
-*/
-kind.concatHandler = function (ctor, props, instance) {
-
-	sup.call(this, ctor, props, instance);
-
-	// only matters if there are computed properties to manage
-	if (props.computed) {
-		
-		var proto = ctor.prototype || ctor
-			, computed = proto._computed? Object.create(proto._computed): {}
-			, dependencies = proto._computedDependencies? Object.create(proto._computedDependencies): {};
-		
-		// if it hasn't already been applied we need to ensure that the prototype will
-		// actually have the computed support mixin present, it will not apply it more
-		// than once to the prototype
-		extend(ComputedSupport, proto);
-	
-		// @NOTE: This is the handling of the original syntax provided for computed properties in 2.3.ish...
-		// All we do here is convert it to a structure that can be used for the other scenario and preferred
-		// computed declarations format
-		if (!props.computed || !(props.computed instanceof Array)) {
-			(function () {
-				var tmp = [], deps, name, conf;
-				// here is the slow iteration over the properties...
-				for (name in props.computed) {
-					// points to the dependencies of the computed method
-					deps = props.computed[name];
-					/*jshint -W083 */
-					conf = deps && deps.find(function (ln) {
-						// we deliberately remove the entry here and forcibly return true to break
-						return typeof ln == 'object'? (utils.remove(deps, ln) || true): false;
-					});
-					/*jshint +W083 */
-					// create a single entry now for the method/computed with all dependencies
-					tmp.push({method: name, path: deps, cached: conf? conf.cached: null});
-				}
-				
-				// note that we only do this one so even for a mixin that is evaluated several
-				// times this would only happen once
-				props.computed = tmp;
-			}());
-		}
-		
-		var addDependency = function (path, dep) {
-			// its really an inverse look at the original
-			var deps;
-			
-			if (dependencies[path] && !dependencies.hasOwnProperty(path)) dependencies[path] = dependencies[path].slice();
-			deps = dependencies[path] || (dependencies[path] = []);
-			deps.push(dep);
-		};
-		
-		// now we handle the new computed properties the way we intended to
-		for (var i=0, ln; (ln=props.computed[i]); ++i) {
-			// if the entry already exists we are merely updating whether or not it is
-			// now cached
-			computed[ln.method] = !! ln.cached;
-			// we must now look to add an entry for any given dependencies and map them
-			// back to the computed property they will trigger
-			/*jshint -W083 */
-			if (ln.path && ln.path instanceof Array) ln.path.forEach(function (dep) { addDependency(dep, ln.method); });
-			/*jshint +W083 */
-			else if (ln.path) addDependency(ln.path, ln.method);
-		}
-		
-		// arg, free the key from the properties so it won't be applied later...
-		// delete props.computed;
-		// make sure to reassign the correct items to the prototype
-		proto._computed = computed;
-		proto._computedDependencies = dependencies;
-	}
-};
-
-},{'./kind':'enyo/kind','./utils':'enyo/utils'}],'enyo/ApplicationSupport':[function (module,exports,global,require,request){
-/**
-* Exports the {@link module:enyo/ApplicationSupport~ApplicationSupport} mixin.
-* @module enyo/ApplicationSupport
-*/
-
-require('enyo');
-
-var kind = require('./kind');
-
-/**
-* An internally-used support {@glossary mixin} that is applied to all
-* [components]{@link module:enyo/Component~Component} of an {@link module:enyo/Application~Application} instance
-* (and to their components, recursively). This mixin adds an `app` property to
-* each component -- a local reference to the `Application` instance that
-* the component belongs to.
-* 
 * @mixin
 * @protected
 */
-var ApplicationSupport = {
-
+var BindingSupport = {
+	
 	/**
 	* @private
 	*/
-	name: 'ApplicationSupport',
-
+	name: 'BindingSupport',
+	
 	/**
 	* @private
 	*/
-	adjustComponentProps: kind.inherit(function (sup) {
-		return function (props) {
-			props.app = props.app || this.app;
+	_bindingSupportInitialized: false,
+	
+	/**
+	* Imperatively creates a [binding]{@link module:enyo/Binding~Binding}. Merges a variable
+	* number of [hashes]{@glossary Object} and instantiates a binding that
+	* will have its [owner]{@link module:enyo/Binding~Binding#owner} property set to the callee
+	* (the current {@link module:enyo/CoreObject~Object}). Bindings created in this way will be
+	* [destroyed]{@link module:enyo/Binding~Binding#destroy} when their `owner` is
+	* [destroyed]{@link module:enyo/CoreObject~Object#destroy}.
+	*
+	* @param {...Object} props A variable number of [hashes]{@glossary Object} that will
+	*	be merged into the properties applied to the {@link module:enyo/Binding~Binding} instance.
+	* @returns {this} The callee for chaining.
+	* @public
+	*/
+	binding: function () {
+		var args = utils.toArray(arguments)
+			, props = utils.mixin(args)
+			, bindings = this.bindings || (this.bindings = [])
+			, passiveBindings = this.passiveBindings || (this.passiveBindings = [])
+			, PBCtor = Binding.PassiveBinding
+			, Ctor, bnd;
+			
+		props.owner = props.owner || this;
+		Ctor = props.kind = props.kind || this.defaultBindingKind || Binding.defaultBindingKind;
+		
+		if (this._bindingSupportInitialized) {
+			utils.isString(Ctor) && (Ctor = props.kind = kind.constructorForKind(Ctor));
+			bnd = new Ctor(props);
+			bindings.push(bnd);
+			if (Ctor === PBCtor) {
+				passiveBindings.push(bnd);
+			}
+			return bnd;
+		} else bindings.push(props);
+		
+		return this;
+	},
+	
+	/**
+	* Removes and [destroys]{@link module:enyo/Binding~Binding#destroy} all of, or a subset of,
+	* the [bindings]{@link module:enyo/Binding~Binding} belonging to the callee.
+	*
+	* @param {module:enyo/Binding~Binding[]} [subset] - The optional [array]{@glossary Array} of
+	*	[bindings]{@link module:enyo/Binding~Binding} to remove.
+	* @returns {this} The callee for chaining.
+	* @public
+	*/
+	clearBindings: function (subset) {
+		var bindings = subset || (this.bindings && this.bindings.slice());
+		bindings.forEach(function (bnd) {
+			bnd.destroy();
+		});
+		
+		return this;
+	},
+
+	syncBindings: function (opts) {
+		var all = opts && opts.all,
+			force = opts && opts.force,
+			bindings = all ? this.bindings : this.passiveBindings;
+
+		bindings.forEach(function (b) {
+			b.sync(force);
+		});
+	},
+	
+	/**
+	* Removes a single {@link module:enyo/Binding~Binding} from the callee. (This does not
+	* [destroy]{@link module:enyo/Binding~Binding#destroy} the binding.) Also removes the
+	* [owner]{@link module:enyo/Binding~Binding#owner} reference if it is the callee.
+	*
+	* It should be noted that when a binding is destroyed, it is automatically
+	* removed from its owner.
+	*
+	* @param {module:enyo/Binding~Binding} binding - The {@link module:enyo/Binding~Binding} instance to remove.
+	* @returns {this} The callee for chaining.
+	* @public
+	*/
+	removeBinding: function (binding) {
+		utils.remove(binding, this.bindings);
+		if (binding.ctor === Binding.PassiveBinding) {
+			utils.remove(binding, this.passiveBindings);
+		}
+		
+		if (binding.owner === this) binding.owner = null;
+		
+		return this;
+	},
+	
+	/**
+	* @private
+	*/
+	constructed: kind.inherit(function (sup) {
+		return function () {
+			var bindings = this.bindings;
+			this._bindingSupportInitialized = true;
+			if (bindings) {
+				this.bindings = [];
+				this.passiveBindings = [];
+				bindings.forEach(function (def) {
+					this.binding(def);
+				}, this);
+			}
 			sup.apply(this, arguments);
 		};
 	}),
-
+	
 	/**
 	* @private
 	*/
 	destroy: kind.inherit(function (sup) {
 		return function () {
-			// release the reference to the application
-			this.app = null;
 			sup.apply(this, arguments);
-		};
-	})
-
-};
-
-module.exports = ApplicationSupport;
-
-},{'./kind':'enyo/kind'}],'enyo/ComponentBindingSupport':[function (module,exports,global,require,request){
-/**
-* Exports the {@link module:enyo/ComponentBindingSupport~ComponentBindingSupport} mixin.
-* @module enyo/ComponentBindingSupport
-*/
-
-require('enyo');
-
-var
-	kind = require('./kind');
-
-/**
-* An internally-used {@glossary mixin} applied to {@link module:enyo/Component~Component}
-* instances to better support [bindings]{@link module:enyo/Binding~Binding}.
-*
-* @mixin
-* @protected
-*/
-var ComponentBindingSupport = {
-	
-	/**
-	* @private
-	*/
-	name: 'ComponentBindingSupport',
-	
-	/**
-	* @private
-	*/
-	adjustComponentProps: kind.inherit(function (sup) {
-		return function (props) {
-			sup.apply(this, arguments);
-			props.bindingTransformOwner || (props.bindingTransformOwner = this.getInstanceOwner());
+			this.bindings && this.bindings.length && this.clearBindings();
+			this.bindings = null;
+			this.passiveBindings = null;
 		};
 	})
 };
 
-module.exports = ComponentBindingSupport;
-
-},{'./kind':'enyo/kind'}],'enyo/Control/floatingLayer':[function (module,exports,global,require,request){
-/**
-* Exports the {@link module:enyo/Control/floatingLayer~FloatingLayer} singleton instance.
-* @module enyo/Control/floatingLayer
-*/
-
-var
-	kind = require('../kind'),
-	platform = require('../platform');
-
-module.exports = function (Control) {
-	/**
-	* {@link module:enyo/Control/floatingLayer~FloatingLayer} is a
-	* [control]{@link module:enyo/Control~Control} that provides a layer for controls that should be
-	* displayed above an [application]{@link module:enyo/Application~Application}. The `floatingLayer`
-	* singleton can be set as a control's parent to have the control float above the application, e.g.:
-	*
-	* ```
-	* var floatingLayer = require('enyo/floatingLayer');
-	* ...
-	* create: kind.inherit(function (sup) {
-	*	return function() {
-	*		sup.apply(this, arguments);
-	*		this.setParent(floatingLayer);
-	*	}
-	* });
-	* ```
-	*
-	* Note: `FloatingLayer` is not meant to be instantiated by users.
-	*
-	* @class FloatingLayer
-	* @extends module:enyo/Control~Control
-	* @ui
-	* @protected
-	*/
-	var FloatingLayer = kind(
-		/** @lends module:enyo/Control/floatingLayer~FloatingLayer.prototype */ {
-
-		/**
-		* @private
-		*/
-		kind: Control,
-
-		/**
-		* @private
-		*/
-		classes: 'enyo-fit enyo-clip enyo-untouchable',
-
-		/**
-		* @private
-		*/
-		accessibilityPreventScroll: true,
-
-		/**
-		* @method
-		* @private
-		*/
-		create: kind.inherit(function (sup) {
-			return function() {
-				sup.apply(this, arguments);
-				this.setParent(null);
-
-				if (platform.ie < 11) {
-					this.removeClass('enyo-fit');
-				}
-			};
-		}),
-
-		/**
-		* Detects when [node]{@glossary Node} is detatched due to `document.body` being stomped.
-		*
-		* @method
-		* @private
-		*/
-		hasNode: kind.inherit(function (sup) {
-			return function() {
-				sup.apply(this, arguments);
-				if (this.node && !this.node.parentNode) {
-					this.teardownRender();
-				}
-				return this.node;
-			};
-		}),
-
-		/**
-		* @method
-		* @private
-		*/
-		render: kind.inherit(function (sup) {
-			return function() {
-				this.parentNode = document.body;
-				return sup.apply(this, arguments);
-			};
-		}),
-
-		/**
-		* @private
-		*/
-		generateInnerHtml: function () {
-			return '';
-		},
-
-		/**
-		* @private
-		*/
-		beforeChildRender: function () {
-			if (!this.hasNode()) {
-				this.render();
-			}
-		},
-
-		/**
-		* @private
-		*/
-		teardownChildren: function () {
-		}
-	});
-
-	return FloatingLayer;
-};
-},{'../kind':'enyo/kind','../platform':'enyo/platform'}],'enyo/Layout':[function (module,exports,global,require,request){
-require('enyo');
+module.exports = BindingSupport;
 
 /**
-* Contains the declaration for the {@link module:enyo/Layout~Layout} kind.
-* @module enyo/Layout
+	Hijack the original so we can add additional default behavior.
 */
-
-var
-	kind = require('./kind');
+var sup = kind.concatHandler
+	, flags = {ignore: true};
 
 /**
-* {@link module:enyo/Layout~Layout} is the base [kind]{@glossary kind} for layout
-* kinds. Layout kinds are used by {@link module:enyo/UiComponent~UiComponent}-based
-* [controls]{@link module:enyo/Control~Control} to allow for arranging of child controls by
-* setting the [layoutKind]{@link module:enyo/UiComponent~UiComponent#layoutKind} property.
-* 
-* Derived kinds will usually provide their own
-* [layoutClass]{@link module:enyo/Layout~Layout#layoutClass} property to affect the CSS
-* rules used, and may also implement the [flow()]{@link module:enyo/Layout~Layout#flow}
-* and [reflow()]{@link module:enyo/Layout~Layout#reflow} methods. `flow()` is called
-* during control rendering, while `reflow()` is called when the associated
-* control is resized.
-*
-* @class Layout
-* @public
+* @private
 */
-module.exports = kind(
-	/** @lends module:enyo/Layout~Layout.prototype */ {
-
-	name: 'enyo.Layout',
-
-	/**
-	* @private
-	*/
-	kind: null,
-
-	/** 
-	* CSS class that's added to the [control]{@link module:enyo/Control~Control} using this 
-	* [layout]{@link module:enyo/Layout~Layout} [kind]{@glossary kind}.
-	*
-	* @type {String}
-	* @default ''
-	* @public
-	*/
-	layoutClass: '',
+kind.concatHandler = function (ctor, props, instance) {
+	var proto = ctor.prototype || ctor
+		, kind = props && (props.defaultBindingKind || Binding.defaultBindingKind)
+		, defaults = props && props.bindingDefaults;
 	
-	/**
-	* @private
-	*/
-	constructor: function (container) {
-		this.container = container;
-		if (container) {
-			container.addClass(this.layoutClass);
-		}
-	},
-
-	/**
-	* @private
-	*/
-	destroy: function () {
-		if (this.container) {
-			this.container.removeClass(this.layoutClass);
-		}
-	},
-	
-	/**
-	* Called during static property layout (i.e., during rendering).
-	*
-	* @public
-	*/
-	flow: function () {
-	},
-
-	/** 
-	* Called during dynamic measuring layout (i.e., during a resize).
-	*
-	* May short-circuit and return `true` if the layout needs to be
-	* redone when the associated Control is next shown. This is useful
-	* for cases where the Control itself has `showing` set to `true`
-	* but an ancestor is hidden, and the layout is therefore unable to
-	* get accurate measurements of the Control or its children.
-	*
-	* @public
-	*/
-	reflow: function () {
+	sup.call(this, ctor, props, instance);
+	if (props.bindings) {
+		props.bindings.forEach(function (bnd) {
+			defaults && utils.mixin(bnd, defaults, flags);
+			bnd.kind || (bnd.kind = kind); 
+		});
+		
+		proto.bindings = proto.bindings? proto.bindings.concat(props.bindings): props.bindings;
+		delete props.bindings;
 	}
-});
+};
 
-},{'./kind':'enyo/kind'}],'enyo/LinkedList':[function (module,exports,global,require,request){
+},{'./kind':'enyo/kind','./utils':'enyo/utils','./Binding':'enyo/Binding'}],'enyo/LinkedList':[function (module,exports,global,require,request){
 require('enyo');
 
 /**
@@ -5249,191 +5433,7 @@ module.exports = kind(
 	}
 });
 
-},{'./kind':'enyo/kind','./LinkedListNode':'enyo/LinkedListNode'}],'enyo/BindingSupport':[function (module,exports,global,require,request){
-/**
-* Exports the {@link module:enyo/BindingSupport~BindingSupport} mixin
-* @module enyo/BindingSupport
-*/
-
-require('enyo');
-
-var
-	kind = require('./kind'),
-	utils = require('./utils');
-
-var
-	Binding = require('./Binding');
-
-kind.concatenated.push('bindings');
-
-/**
-* An internally-used {@glossary mixin} that is added to {@link module:enyo/CoreObject~Object}
-* and its [subkinds]{@glossary subkind}. It includes public and protected API
-* methods for working with [bindings]{@link module:enyo/Binding~Binding}.
-*
-* @mixin
-* @protected
-*/
-var BindingSupport = {
-	
-	/**
-	* @private
-	*/
-	name: 'BindingSupport',
-	
-	/**
-	* @private
-	*/
-	_bindingSupportInitialized: false,
-	
-	/**
-	* Imperatively creates a [binding]{@link module:enyo/Binding~Binding}. Merges a variable
-	* number of [hashes]{@glossary Object} and instantiates a binding that
-	* will have its [owner]{@link module:enyo/Binding~Binding#owner} property set to the callee
-	* (the current {@link module:enyo/CoreObject~Object}). Bindings created in this way will be
-	* [destroyed]{@link module:enyo/Binding~Binding#destroy} when their `owner` is
-	* [destroyed]{@link module:enyo/CoreObject~Object#destroy}.
-	*
-	* @param {...Object} props A variable number of [hashes]{@glossary Object} that will
-	*	be merged into the properties applied to the {@link module:enyo/Binding~Binding} instance.
-	* @returns {this} The callee for chaining.
-	* @public
-	*/
-	binding: function () {
-		var args = utils.toArray(arguments)
-			, props = utils.mixin(args)
-			, bindings = this.bindings || (this.bindings = [])
-			, passiveBindings = this.passiveBindings || (this.passiveBindings = [])
-			, PBCtor = Binding.PassiveBinding
-			, Ctor, bnd;
-			
-		props.owner = props.owner || this;
-		Ctor = props.kind = props.kind || this.defaultBindingKind || Binding.defaultBindingKind;
-		
-		if (this._bindingSupportInitialized) {
-			utils.isString(Ctor) && (Ctor = props.kind = kind.constructorForKind(Ctor));
-			bnd = new Ctor(props);
-			bindings.push(bnd);
-			if (Ctor === PBCtor) {
-				passiveBindings.push(bnd);
-			}
-			return bnd;
-		} else bindings.push(props);
-		
-		return this;
-	},
-	
-	/**
-	* Removes and [destroys]{@link module:enyo/Binding~Binding#destroy} all of, or a subset of,
-	* the [bindings]{@link module:enyo/Binding~Binding} belonging to the callee.
-	*
-	* @param {module:enyo/Binding~Binding[]} [subset] - The optional [array]{@glossary Array} of
-	*	[bindings]{@link module:enyo/Binding~Binding} to remove.
-	* @returns {this} The callee for chaining.
-	* @public
-	*/
-	clearBindings: function (subset) {
-		var bindings = subset || (this.bindings && this.bindings.slice());
-		bindings.forEach(function (bnd) {
-			bnd.destroy();
-		});
-		
-		return this;
-	},
-
-	syncBindings: function (opts) {
-		var all = opts && opts.all,
-			force = opts && opts.force,
-			bindings = all ? this.bindings : this.passiveBindings;
-
-		bindings.forEach(function (b) {
-			b.sync(force);
-		});
-	},
-	
-	/**
-	* Removes a single {@link module:enyo/Binding~Binding} from the callee. (This does not
-	* [destroy]{@link module:enyo/Binding~Binding#destroy} the binding.) Also removes the
-	* [owner]{@link module:enyo/Binding~Binding#owner} reference if it is the callee.
-	*
-	* It should be noted that when a binding is destroyed, it is automatically
-	* removed from its owner.
-	*
-	* @param {module:enyo/Binding~Binding} binding - The {@link module:enyo/Binding~Binding} instance to remove.
-	* @returns {this} The callee for chaining.
-	* @public
-	*/
-	removeBinding: function (binding) {
-		utils.remove(binding, this.bindings);
-		if (binding.ctor === Binding.PassiveBinding) {
-			utils.remove(binding, this.passiveBindings);
-		}
-		
-		if (binding.owner === this) binding.owner = null;
-		
-		return this;
-	},
-	
-	/**
-	* @private
-	*/
-	constructed: kind.inherit(function (sup) {
-		return function () {
-			var bindings = this.bindings;
-			this._bindingSupportInitialized = true;
-			if (bindings) {
-				this.bindings = [];
-				this.passiveBindings = [];
-				bindings.forEach(function (def) {
-					this.binding(def);
-				}, this);
-			}
-			sup.apply(this, arguments);
-		};
-	}),
-	
-	/**
-	* @private
-	*/
-	destroy: kind.inherit(function (sup) {
-		return function () {
-			sup.apply(this, arguments);
-			this.bindings && this.bindings.length && this.clearBindings();
-			this.bindings = null;
-			this.passiveBindings = null;
-		};
-	})
-};
-
-module.exports = BindingSupport;
-
-/**
-	Hijack the original so we can add additional default behavior.
-*/
-var sup = kind.concatHandler
-	, flags = {ignore: true};
-
-/**
-* @private
-*/
-kind.concatHandler = function (ctor, props, instance) {
-	var proto = ctor.prototype || ctor
-		, kind = props && (props.defaultBindingKind || Binding.defaultBindingKind)
-		, defaults = props && props.bindingDefaults;
-	
-	sup.call(this, ctor, props, instance);
-	if (props.bindings) {
-		props.bindings.forEach(function (bnd) {
-			defaults && utils.mixin(bnd, defaults, flags);
-			bnd.kind || (bnd.kind = kind); 
-		});
-		
-		proto.bindings = proto.bindings? proto.bindings.concat(props.bindings): props.bindings;
-		delete props.bindings;
-	}
-};
-
-},{'./kind':'enyo/kind','./utils':'enyo/utils','./Binding':'enyo/Binding'}],'enyo/ObserverChain':[function (module,exports,global,require,request){
+},{'./kind':'enyo/kind','./LinkedListNode':'enyo/LinkedListNode'}],'enyo/ObserverChain':[function (module,exports,global,require,request){
 require('enyo');
 
 /**
