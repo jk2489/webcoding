@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Example</title>
+    </head>
+    <body>
+        <p>First TabMenu (#tabMenu1)</p>
+        <ul class="tab-menu" id="tabMenu1">
+            <li class="menuitem1">Google</li>
+            <li class="menuitem2">Facebook</li>
+            <li class="menuitem3">Pinterest</li>
+            <li class="menuitem4">Twitter</li>
+            <li class="menuitem5">Airbnb</li>
+            <li class="menuitem6">Path</li>
+        </ul>
+
+        <p>Second TabMenu (#tabMenu2)</p>
+        <ul class="tab-menu" id="tabMenu2">
+            <li class="menuitem1">Google</li>
+            <li class="menuitem2">Facebook</li>
+            <li class="menuitem3">Pinterest</li>
+            <li class="menuitem4">Twitter</li>
+            <li class="menuitem5">Airbnb</li>
+            <li class="menuitem6">Path</li>
+        </ul>
+    </body>
+
+    <script>
+        $(document).ready(function() {
+            var tabMenu1 = new TabMenu();
+            tabMenu1.init("#tabMenu1");
+            tabMenu1.initEvent();
+
+            var tabMenu2 = new TabMenu();
+            tabMenu2.init("#tabMenu2");
+            tabMenu2.initEvent();
+        });
+
+        function TabMenu() {
+            this.$tabMenu = null;
+            this.$menuItems = null;
+            this.$selectMenuItem = null;
+        }
+
+        TabMenu.prototype.init = function(selector) {
+            this.$tabMenu = $(selector);
+            this.$menuItems = this.$tabMenu.find("li");
+        }
+
+        TabMenu.prototype.initEvent = function() {
+            var objThis = this;
+            this.$menuItems.on("click", function() {
+                objThis.setSelectItem($(this));
+            });
+        }
+
+        TabMenu.prototype.setSelectItem = function($menuItem) {
+            if(this.$selectMenuItem) {
+                this.$selectMenuItem.removeClass("select");
+            }
+            this.$selectMenuItem = $menuItem;
+            this.$selectMenuItem.addClass("select");
+        }
+    </script>
+</html>
