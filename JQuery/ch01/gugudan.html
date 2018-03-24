@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Gugudan</title>
+    </head>
+    <script src="/home/jaykim/node_modules/jquery/dist/jquery.min.js"></script>
+    <body>
+        <div>
+            <button id="3dan">
+                3 DAN
+            </button>
+            <button id="6dan">
+                6 DAN
+            </button>
+            <button id="9dan">
+                9 DAN
+            </button>
+            <button id="clear">
+                CLEAR
+            </button>
+        </div>
+        <p>
+        <div id="output">
+            RESULT WILL BE PRINTED
+        </div>
+        </p>
+        <script>
+            $(document).ready(function() {
+                var my99dan = new MY99DAN();
+
+                $("#3dan").click(function() {
+                    my99dan.print3dan();
+                })
+                $("#6dan").click(function() {
+                    my99dan.print6dan();
+                })
+                $("#9dan").click(function() {
+                    my99dan.print9dan();
+                })
+                $("#clear").click(function() {
+                    my99dan.clear();
+                })
+            });
+
+            function MY99DAN() {
+                this.$output = $("#output");
+            }
+
+            MY99DAN.prototype.printdan=function(dan) {
+                var result ="";
+                for(var i = 1; i<= 9; i++) {
+                    result += dan + " * " + i + " = " + (dan * i) + "<br/>"
+                }
+                this.$output.html(result);
+            }
+
+            MY99DAN.prototype.print3dan=function() {
+                this.printdan(3);
+            }
+            MY99DAN.prototype.print6dan=function() {
+                this.printdan(6);
+            }
+            MY99DAN.prototype.print9dan=function() {
+                this.printdan(9);
+            }
+            MY99DAN.prototype.clear=function(){
+                this.$output.html("");
+            }
+        </script>
+    </body>
+</html>

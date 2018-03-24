@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Calculator</title>
+    </head>
+    <script src="/home/jaykim/node_modules/jquery/dist/jquery.min.js"></script>
+    <body>
+        <div>
+            Number1: <input id="val1"><br>
+            Operator: <input id="op"><br>
+            Number2: <input id="val2"><br><br>
+            <button id="cal">Confirm</button>
+            <button id="clear">Clear</button>
+        </div>
+        <br>
+        <div id="output">
+            Result is here
+        </div>
+        <script>
+            $(document).ready(function() {
+                var cal = new Calculator();
+            });
+
+            function Calculator() {
+                this.$value1 = null;
+                this.operator = null;
+                this.$value2 = null;
+                this.$output = null;
+
+                this.init();
+                this.initEvent();
+            }
+
+            Calculator.prototype.initEvent=function() {
+                var objThis = this;
+
+                $("#cal").click(function() {
+                    objThis.exeCalculate();
+                })
+                $("#clear").click(function() {
+                    objThis.cls();
+                })
+            }
+
+            Calculator.prototype.init=function() {
+                this.$value1 = $("#val1");
+                this.operator = $("#op");
+                this.$value2 = $("#val2");
+                this.$output = $("#output");
+            }
+
+            Calculator.prototype.exeCalculate=function() {
+                var val1 = parseInt(this.$value1.val());
+                var operator = this.operator.val();
+                var val2 = parseInt(this.$value2.val());
+
+                this.calculate(operator, val1, val2);
+            }
+
+            Calculator.prototype.cls=function() {
+                this.$value1="";
+                this.operator = null;
+                this.$value2="";
+                this.$output = null;
+            }
+
+            Calculator.prototype.calculate=function(op, num1, num2) {
+                var result="";
+
+                switch(op) {
+                    case "+":
+                        result = num1 + num2;
+                        break;
+                    case "-":
+                        result = num1 - num2;
+                        break;
+                    case "*":
+                        result = num1 * num2;
+                        break;
+                    case "/":
+                        result = num1 / num2;
+                        break;
+                    default:
+                        result = "wrong operation";
+                }
+                this.$output.html(result);
+            }
+        </script>
+    </body>
+</html>
