@@ -1,0 +1,107 @@
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>TabMenu</title>
+    </head>
+    <style>
+        .tabMenu {
+            list-style: none;
+        }
+        .tab-menu li {
+            width:96px;
+            height:44px;
+            background-position-y:0;
+            text-indent:-1000px;
+            overflow:hidden;
+            display:inline-block;
+            float:left;
+        }
+        .tab-menu li:hover {
+            background-position-y:-44px;
+        }
+        .tab-menu li.select {
+            background-position-y:-88px;
+            height:80px;
+        }
+        .tab-menu li.menuitem1 {
+            background-image:url(./images/newbtn.bar.1.png);
+        }
+        .tab-menu li.menuitem2 {
+            background-image:url(./images/newbtn.bar.2.png);
+        }
+        .tab-menu li.menuitem3 {
+            background-image:url(./images/newbtn.bar.3.png);
+        }
+        .tab-menu li.menuitem4 {
+            background-image:url(./images/newbtn.bar.4.png);
+        }
+        .tab-menu li.menuitem5 {
+            background-image:url(./images/newbtn.bar.5.png);
+        }
+        .tab-menu li.menuitem6 {
+            background-image:url(./images/newbtn.bar.6.png);
+        }
+        #tabMenu1 {
+            position: absolute;
+            left:10px;
+            top:50px;
+        }
+    </style>
+    <script src="/home/jaykim/node_modules/jquery/dist/jquery.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            var tab1 = new TabMenu("#tabMenu1");
+
+            $("#btnSelect").click(function() {
+                var index = window.prompt("Select the index of the item");
+                index = parseInt(index);
+                tab1.setSelectItemAt(index);
+            })
+        });
+
+        function TabMenu(selector) {
+            this.$tabMenu = null;
+            this.$menuItems = null;
+            this.$selectMenuItem = null;
+
+            this.init(selector);
+            this.initEvent();
+        }
+
+        TabMenu.prototype.init = function(selector) {
+            this.$tabMenu = $(selector);
+            this.$menuItems = this.$tabMenu.find("li");
+        }
+
+        TabMenu.prototype.initEvent = function() {
+            var objThis = this;
+            this.$menuItems.on("click", function() {
+                objThis.setSelectItem($(this));
+            });
+        }
+
+        TabMenu.prototype.setSelectItem = function($menuItem) {
+            if(this.$selectMenuItem) {
+                this.$selectMenuItem.removeClass("select");
+            }
+            this.$selectMenuItem = $menuItem;
+            this.$selectMenuItem.addClass("select");
+        }
+
+        TabMenu.protoype.setSelectItemAt=function(index) {
+            var $menuItem = this.$menuItems.eq(index);
+            this.setSelectItem($menuItem);
+        }
+    </script>
+    <body>
+        <!--<button id="btnSelect">Select the items</button>-->
+        <ul class="tab-menu" id="tabMenu1">
+            <li class="menuitem1">google</li>
+            <li class="menuitem2">facebook</li>
+            <li class="menuitem3">pinterest</li>
+            <li class="menuitem4">twitter</li>
+            <li class="menuitem5">airbnb</li>
+            <li class="menuitem6">path</li>
+        </ul>
+    </body>
+</html>
