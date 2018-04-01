@@ -1,0 +1,103 @@
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title></title>
+    </head>
+    <style>
+        body {
+            font-size:9pt;
+        }
+        div.simage-gallery {
+            position: relative;
+            border: 1px solid #000;
+            height: 600px;
+        }
+        div.simage-gallery img {
+            position: absolute;
+            left:0;
+            top:0;
+            width:120px;
+        }
+    </style>
+    <script src="/home/jaykim/node_modules/jquery/dist/jquery.min.js"></script>
+    <script>
+        (function($) {
+            function SimpleGallery(selector, count, width, height) {
+                this.$images = null;
+                this.count = count;
+                this.imageWidth = width;
+                this.imageHeight = height;
+                this.init(selector);
+            }
+
+            SimpleGallery.prototype.init=function(Selector) {
+                this.$images = $(selector);
+            }
+
+            SimpleGallery.prototype.showGalley=function() {
+                var length = this.$images.length;
+
+                for(var i = 0;i < length; i++) {
+                    var $img = this.$images.eq(i);
+                    var x = 100+((i % this.count) * this.imageWidth);
+                    var y = 100+(parseInt(i/this.count)*this.imageHeight);
+
+                    $img.css({
+                        left:x,
+                        top:y
+                    });
+                }
+            }
+            
+            $.simpleGalleryDefOptions = {
+                count:5,
+                imageWidth:200,
+                imageHeight:200
+            }
+
+            $.fn.simpleGallery=function(optionList) {
+                this.each(function(index) {
+                    var options = $.extend(null, $.simpleGalleryDefOptions, optionList[index]);
+                    var gallery = new Simplegallery($(this).children("img"), options.count, options.imageWidth, options.imageHeight);
+                    gallery.showGalley();
+                })
+            }
+        })(jQuery);
+
+        $(document).ready(function() {
+            $(".simage-gallery").simpleGallery([{
+                count:6,
+                imageWidth:150,
+                imageHeight:150
+            }, {
+                count:4,
+                imageWidth:200,
+                imageHeight:200
+            }]);
+        });
+    </script>
+    <body>
+        <p>gallery1</p>
+        <div class="simage-gallery" id="gallery1">
+            <img src="banners/1.png">
+            <img src="banners/2.png">
+            <img src="banners/3.png">
+            <img src="banners/4.png">
+            <img src="banners/5.png">
+            <img src="banners/6.png">
+            <img src="banners/7.png">
+            <img src="banners/8.png">
+        </div>
+        <p>gallery2</p>
+        <div class="simage-gallery" id="gallery2">
+            <img src="banners/1.png">
+            <img src="banners/2.png">
+            <img src="banners/3.png">
+            <img src="banners/4.png">
+            <img src="banners/5.png">
+            <img src="banners/6.png">
+            <img src="banners/7.png">
+            <img src="banners/8.png">
+        </div>
+    </body>
+</html>
