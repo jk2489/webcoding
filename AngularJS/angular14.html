@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="/home/jaykim/node_modules/angular/angular.min.js"></script>
+        <title>Angular Example</title>
+    </head>
+    <body ng-app="NameCalculator">
+        <h1>Name Calculator</h1>
+        <div ng-controller="NameCalculatorController">
+            <div>
+                Your Name:
+                <input type="text" ng-model="name" ng-keyup="displayNumeric();">
+            </div>
+            <div>Total Numeric value of person's name is: {{totalValue}}</div>
+        </div>
+
+        <script>
+            (function() {
+                'use strict';
+                angular.module('NameCalculator', [])
+                .controller('NameCalculatorController', function($scope) {
+                    $scope.name = "";
+                    $scope.totalValue = 0;
+
+                    $scope.displayNumeric = function() {
+                        var totalNameValue = calculateNumericForString($scope.name);
+                        $scope.totalValue = totalNameValue;
+                    };
+
+                    function calculateNumericForString(string) {
+                        var totalStringValue = 0;
+                        for(var i = 0; i < string.length; i++) {
+                            totalStringValue += string.charCodeAt(i);
+                        }
+                        return totalStringValue;
+                    };
+                });
+            })();
+        </script>
+    </body>
+</html>

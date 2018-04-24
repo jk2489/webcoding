@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html ng-app="DIApp">
+    <head>
+        <meta charset="utf-8">
+        <script src="/home/jaykim/node_modules/angular/angular.min.js"></script>
+        <script>
+            (function() {
+                'use strict';
+                angular.module('DIApp', [])
+                .controller('DIController', DIController);
+
+                function DIController($scope, $filter, $injector) {
+                    $scope.name = "Kim";
+
+                    $scope.upper = function() {
+                        var upCase = $filter('uppercase');
+                        $scope.name = upCase($scope.name);
+                    };
+
+                    console.log($injector.annotate(DIController));
+                }
+
+                function AnnotateMe(name, job, blah) {
+                    return "Blah";
+                }
+                 console.log(AnnotateMe.toString());
+            })();
+        </script>
+    </head>
+    <body>
+        <h1>Dependency Injection</h1>
+        <div ng-controller="DIController">
+            <input type="text" ng-model="name" ng-blur="upper();">
+        </div>
+    </body>
+</html>
