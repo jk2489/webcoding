@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html ng-app="MsgApp">
+    <head>
+        <meta charset="utf-8">
+        <script src="/home/jaykim/node_modules/angular/angular.min.js"></script>
+        <script>
+            (function() {
+                'use strict';
+                angular.module('MsgApp', [])
+                .controller('MsgController', MsgController);
+
+                MsgController.$inject = ['$scope'];
+                function MsgController($scope) {
+                    $scope.sayMessage = function() {
+                        return "Hello World";
+                    };
+                }
+            })();
+        </script>
+    </head>
+    <body>
+        <h1>Expression/Interpolation</h1>
+        <div ng-controller='MsgController'>
+            Message is: <br>
+            {{ sayMessage() }}
+        </div>
+    </body>
+</html>

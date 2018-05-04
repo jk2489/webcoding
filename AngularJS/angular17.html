@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html ng-app="BindingApp">
+    <head>
+        <meta charset="utf-8">
+        <script src="/home/jaykim/node_modules/angular/angular.min.js"></script>
+        <script>   
+            (function() {
+                'use strict';
+
+                angular.module('BindingApp', [])
+                .controller('BindingController', BindingController);
+
+                BindingController.$inject = ['$scope'];
+                function BindingController($scope) {
+                    $scope.firstName = "Jiyoung";
+                    //$scope.fullName = "";
+
+                    $scope.showNumberOfWatchers = function() {
+                        console.log("# of watchers: ", $scope.$$watchersCount);
+                    };
+
+                    $scope.setFullName = function() {
+                        $scope.fullName = $scope.firstName + " " + "Kim";
+                    }
+
+                    $scope.logFirstName = function() { 
+                        console.log("First Name is: ", $scope.firstName);
+                    };
+
+                    $scope.logFullName = function() { 
+                        console.log("Full Name is: ", $scope.fullName);
+                    };
+                }
+            })();
+        </script>
+    </head>
+    <body>
+        <div ng-controller="BindingController">
+            <button ng-click="showNumberOfWatchers()">log # of watchers</button>
+            <button ng-click="setFullName()">Set Full Name</button><br>
+
+            Full name is: {{ :: fullName }} <br>
+            <button ng-click="logFirstName()">Log First Name</button><br>
+            <button ng-click="logFullName()">Log Full Name</button><br>
+
+            <div>
+                <input type="text" ng-model="firstName">
+            </div>
+        </div>
+    </body>
+</html>
