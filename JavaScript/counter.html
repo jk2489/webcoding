@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="EUC-KR">
+    <title>Counter Example</title>
+    <script type="text/javascript">
+        function go() {
+            var disp = document.getElementById('disp1');
+            var cnt = 1;
+
+            var id = setInterval(() => {
+                disp.innerHTML = cnt++;
+
+                if (cnt >= 101) {
+                    clearInterval(id);
+                }
+            }, 30);
+        }
+
+        function go2() {
+            var disp = document.getElementById('disp2');
+            var cnt = 1;
+
+            for (var cnt = 1; cnt <= 100; cnt++) {
+                (function (x) {
+                    //var x = cnt;
+
+                    setTimeout(() => {
+                        disp.innerHTML = x;
+                    }, 30 * cnt);
+                })(cnt);
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div id="disp1">0</div>
+    <button onclick="go();">GO</button>
+    <hr />
+    <div id="disp2">0</div>
+    <button onclick="go2();">GO2</button>
+</body>
+
+</html>
